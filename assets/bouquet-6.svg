@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650">
+<rect width="800" height="650" fill="#f0ece5"/>
+<ellipse cx="400" cy="580" rx="250" ry="28" fill="#d8d0c4"/>
+<g stroke="#5f7258" stroke-width="8" fill="none">
+<path d="M320 570L385 290M480 570L415 290M365 570L400 280M440 570L405 300"/>
+</g>
+<path d="M255 430Q400 500 545 430L505 570Q400 615 295 570Z" fill="#f7f1e8" stroke="#d6cdbf" stroke-width="3"/>
+<g fill="#e7bea2" stroke="#b78678" stroke-width="4">
+<circle cx="300" cy="285" r="50"/><circle cx="390" cy="225" r="58"/>
+<circle cx="490" cy="275" r="52"/><circle cx="345" cy="330" r="52"/>
+<circle cx="450" cy="340" r="55"/><circle cx="260" cy="345" r="38"/>
+<circle cx="535" cy="350" r="40"/>
+</g>
+<text x="400" y="70" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#34382f">Авторский букет</text>
+</svg>
