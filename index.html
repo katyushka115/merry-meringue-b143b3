@@ -806,29 +806,8 @@
         </div>
         <p>Состав может незначительно меняться<br>в зависимости от свежей поставки.</p>
       </div>
-      <div class="product-grid">
-        <article class="product" id="bouquet-delicate" data-reveal>
-          <div class="product-image"><span class="product-number">01</span><img src="assets/bouquet-1.svg" alt="Букет Нежность"></div>
-          <div class="product-info">
-            <div><h3>Нежность</h3><p>Розовая сезонная композиция</p></div>
-            <button class="order-button" type="button" data-bouquet="Нежность">Заказать</button>
-          </div>
-        </article>
-        <article class="product" id="bouquet-white" data-reveal>
-          <div class="product-image"><span class="product-number">02</span><img src="assets/bouquet-2.svg" alt="Букет Белая классика"></div>
-          <div class="product-info">
-            <div><h3>Белая классика</h3><p>Светлый букет с воздушным силуэтом</p></div>
-            <button class="order-button" type="button" data-bouquet="Белая классика">Заказать</button>
-          </div>
-        </article>
-        <article class="product" id="bouquet-author" data-reveal>
-          <div class="product-image"><span class="product-number">03</span><img src="assets/bouquet-5.svg" alt="Букет Облако гортензий"></div>
-          <div class="product-info">
-            <div><h3>Облако гортензий</h3><p>Объёмная композиция сложного оттенка</p></div>
-            <button class="order-button" type="button" data-bouquet="Облако гортензий">Заказать</button>
-          </div>
-        </article>
-      </div>
+      <<div class="product-grid" id="product-grid">
+</div>
     </section>
 
     <section class="values" id="values" aria-labelledby="values-title">
@@ -919,7 +898,13 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
+   const SUPABASE_URL = 'https://avlozhwwvjqiypifoxox.supabase.co';
+   const SUPABASE_KEY = 'ТВОЙ_PUBLISHABLE_KEY';
+   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
     const body = document.body;
     const menuToggle = document.querySelector('.menu-toggle');
     const navLinks = document.querySelectorAll('.nav-links a');
