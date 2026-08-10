@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SM Flowers — Админка</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f7f4f0;
+      color: #222;
+    }
+
+    .admin {
+      width: min(900px, calc(100% - 32px));
+      margin: 50px auto;
+    }
+
+    .card {
+      background: #fff;
+      padding: 32px;
+      border-radius: 18px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      color: #777;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin: 18px 0 8px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 24px;
+      padding: 14px 22px;
+      border: 0;
+      border-radius: 10px;
+      background: #222;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: .85;
+    }
+
+    #message {
+      margin-top: 18px;
+      min-height: 24px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .success {
+      color: #287a45;
+    }
+
+    .error {
+      color: #b3261e;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="admin">
+
+    <div class="card" id="login-card">
+      <h1>SM Flowers</h1>
+      <p class="subtitle">Панель управления</p>
+
+      <form id="login-form">
+
+        <label for="password">Пароль администратора</label>
+
+        <input
+          id="password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Введите пароль"
+          required
+        >
+
+        <button type="submit">Войти</button>
+
+      </form>
+
+      <div id="message"></div>
+    </div>
+
+
+    <div class="card hidden" id="admin-card">
+
+      <h1>Букеты</h1>
+
+      <p class="subtitle">
+        Панель управления SM Flowers
+      </p>
+
+      <p class="success">
+        Вы успешно вошли в админ-панель.
+      </p>
+
+      <button id="logout">
+        Выйти
+      </button>
+
+    </div>
+
+  </main>
+
+
+  <script>
+    const loginForm = document.getElementById("login-form");
+    const passwordInput = document.getElementById("password");
+    const message = document.getElementById("message");
+
+    const loginCard = document.getElementById("login-card");
+    const adminCard = document.getElementById("admin-card");
+
+    const logoutButton = document.getElementById("logout");
+
+
+    loginForm.addEventListener("submit", async (event) => {
+
+      event.preventDefault();
+
+      message.textContent = "Проверяем пароль...";
+      message.className = "";
+
+
+      try {
+
+        const response = await fetch("/.netlify/functions/admin-login", {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            password: passwordInput.value
+          })
+        });
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+          throw new Error(data.error || "Ошибка входа");
+        }
+
+
+        loginCard.classList.add("hidden");
+        adminCard.classList.remove("hidden");
+
+        passwordInput.value = "";
+
+      } catch (error) {
+
+        message.textContent = error.message;
+        message.className = "error";
+
+      }
+
+    });
+
+
+    logoutButton.addEventListener("click", () => {
+
+      adminCard.classList.add("hidden");
+      loginCard.classList.remove("hidden");
+
+    });
+  </script>
+
+</body>
+</html>
