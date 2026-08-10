@@ -902,9 +902,14 @@
   
   <script>
    const SUPABASE_URL = 'https://avlozhwwvjqiypifoxox.supabase.co';
-   const SUPABASE_KEY = 'ТВОЙ_PUBLISHABLE_KEY';
-   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
+const SUPABASE_KEY = 'ВСТАВЬ_СВОЙ_НАСТОЯЩИЙ_PUBLISHABLE_KEY';
+
+window.smSupabase = window.smSupabase || window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const supabase = window.smSupabase;
     const body = document.body;
     const menuToggle = document.querySelector('.menu-toggle');
     const navLinks = document.querySelectorAll('.nav-links a');
