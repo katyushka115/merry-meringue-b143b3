@@ -118,21 +118,59 @@
 
     <div class="card hidden" id="admin-card">
 
-      <h1>Букеты</h1>
+  <h1>Букеты</h1>
 
-      <p class="subtitle">
-        Панель управления SM Flowers
-      </p>
+  <p class="subtitle">
+    Добавление нового букета
+  </p>
 
-      <p class="success">
-        Вы успешно вошли в админ-панель.
-      </p>
+  <form id="bouquet-form">
 
-      <button id="logout">
-        Выйти
-      </button>
+    <label for="bouquet-name">Название букета</label>
+    <input
+      id="bouquet-name"
+      type="text"
+      placeholder="Например: Нежный"
+      required
+    >
 
-    </div>
+    <label for="bouquet-price">Цена</label>
+    <input
+      id="bouquet-price"
+      type="number"
+      placeholder="Например: 5900"
+      min="0"
+      required
+    >
+
+    <label for="bouquet-description">Описание</label>
+    <input
+      id="bouquet-description"
+      type="text"
+      placeholder="Короткое описание букета"
+    >
+
+    <label for="bouquet-image">Фотография</label>
+    <input
+      id="bouquet-image"
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      required
+    >
+
+    <button type="submit">
+      Добавить букет
+    </button>
+
+  </form>
+
+  <div id="bouquet-message"></div>
+
+  <button id="logout">
+    Выйти
+  </button>
+
+</div>
 
   </main>
 
