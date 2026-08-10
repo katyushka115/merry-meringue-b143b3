@@ -92,28 +92,20 @@
 
   <main class="admin">
 
-    <div class="card" id="login-card">
-      <h1>SM Flowers</h1>
-      <p class="subtitle">Панель управления</p>
+    <div id="netlify-login">
 
-      <form id="login-form">
+  <p>
+    Для входа в панель управления используйте аккаунт
+    Netlify Identity.
+  </p>
 
-        <label for="password">Пароль администратора</label>
+  <button id="login-button" type="button">
+    Войти в админку
+  </button>
 
-        <input
-          id="password"
-          type="password"
-          autocomplete="current-password"
-          placeholder="Введите пароль"
-          required
-        >
+  <div id="message"></div>
 
-        <button type="submit">Войти</button>
-
-      </form>
-
-      <div id="message"></div>
-    </div>
+</div>
 
 
     <div class="card hidden" id="admin-card">
@@ -175,70 +167,46 @@
   </main>
 
 
-  <script>
-    const loginForm = document.getElementById("login-form");
-    const passwordInput = document.getElementById("password");
-    const message = document.getElementById("message");
+  <script src="https://unpkg.com/netlify-identity-widget@1.9.2/build/netlify-identity-widget.js"></script>
 
-    const loginCard = document.getElementById("login-card");
-    const adminCard = document.getElementById("admin-card");
+<script>
+  const loginCard = document.getElementById("login-card");
+  const adminCard = document.getElementById("admin-card");
+  const loginButton = document.getElementById("login-button");
+  const message = document.getElementById("message");
+  const logoutButton = document.getElementById("logout");
 
-    const logoutButton = document.getElementById("logout");
+  const netlifyIdentity = window.netlifyIdentity;
 
+  netlifyIdentity.on("init", user => {
+    if (user) {
+      showAdmin();
+    }
+  });
 
-    loginForm.addEventListener("submit", async (event) => {
+  loginButton.addEventListener("click", () => {
+    netlifyIdentity.open("login");
+  });
 
-      event.preventDefault();
+  netlifyIdentity.on("login", user => {
+    showAdmin();
+    netlifyIdentity.close();
+  });
 
-      message.textContent = "Проверяем пароль...";
-      message.className = "";
+  netlifyIdentity.on("logout", () => {
+    adminCard.classList.add("hidden");
+    loginCard.classList.remove("hidden");
+  });
 
+  logoutButton.addEventListener("click", () => {
+    netlifyIdentity.logout();
+  });
 
-      try {
-
-        const response = await fetch("/.netlify/functions/admin-login", {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            password: passwordInput.value
-          })
-        });
-
-
-        const data = await response.json();
-
-
-        if (!response.ok) {
-          throw new Error(data.error || "Ошибка входа");
-        }
-
-
-        loginCard.classList.add("hidden");
-        adminCard.classList.remove("hidden");
-
-        passwordInput.value = "";
-
-      } catch (error) {
-
-        message.textContent = error.message;
-        message.className = "error";
-
-      }
-
-    });
-
-
-    logoutButton.addEventListener("click", () => {
-
-      adminCard.classList.add("hidden");
-      loginCard.classList.remove("hidden");
-
-    });
-  </script>
+  function showAdmin() {
+    loginCard.classList.add("hidden");
+    adminCard.classList.remove("hidden");
+  }
+</script>
 
 </body>
 </html>
