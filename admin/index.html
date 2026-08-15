@@ -1,212 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SM Flowers — Админка</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
-      background: #f7f4f0;
-      color: #222;
-    }
-
-    .admin {
-      width: min(900px, calc(100% - 32px));
-      margin: 50px auto;
-    }
-
-    .card {
-      background: #fff;
-      padding: 32px;
-      border-radius: 18px;
-      box-shadow: 0 10px 40px rgba(0,0,0,.08);
-    }
-
-    h1 {
-      margin-top: 0;
-      font-size: 32px;
-    }
-
-    .subtitle {
-      color: #777;
-      margin-bottom: 30px;
-    }
-
-    label {
-      display: block;
-      margin: 18px 0 8px;
-      font-weight: 600;
-    }
-
-    input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      font-size: 16px;
-    }
-
-    button {
-      margin-top: 24px;
-      padding: 14px 22px;
-      border: 0;
-      border-radius: 10px;
-      background: #222;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      opacity: .85;
-    }
-
-    #message {
-      margin-top: 18px;
-      min-height: 24px;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .success {
-      color: #287a45;
-    }
-
-    .error {
-      color: #b3261e;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SM Flowers — Админка</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f1eb;color:#20251f;font:14px/1.5 Arial,sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}.wrap{width:min(1180px,calc(100% - 32px));margin:32px auto}.card{background:#fff;border:1px solid #e7e1d8;border-radius:18px;padding:24px;box-shadow:0 8px 30px #0000000b}.login{max-width:460px;margin:10vh auto}.hidden{display:none!important}h1,h2{margin:0 0 10px}.muted{color:#777}.field{margin:14px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;padding:11px 12px;border:1px solid #d9d4cc;border-radius:10px;background:#fff}.field textarea{min-height:90px;resize:vertical}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:11px 16px;background:#263125;color:#fff}.btn.secondary{background:#eee9e1;color:#222}.btn.danger{background:#a83d35}.msg{min-height:22px;margin-top:10px}.error{color:#b3261e}.success{color:#287a45}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{border:1px solid #ddd5ca;background:#fff;color:#333;border-radius:10px;padding:9px 13px}.tab.active{background:#263125;color:#fff}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}.product{display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center;border-top:1px solid #eee8df;padding:14px 0}.product:first-child{border-top:0}.product img{width:90px;height:90px;object-fit:cover;border-radius:10px;background:#eee}.price{font-weight:700}.status{display:inline-block;border-radius:999px;padding:4px 9px;background:#eee9e1}.orders{overflow:auto}.orders table{width:100%;border-collapse:collapse;min-width:760px}.orders th,.orders td{text-align:left;padding:10px;border-bottom:1px solid #eee8df;vertical-align:top}.small{font-size:12px}.preview{width:120px;height:120px;object-fit:cover;border-radius:10px;margin-top:8px}.empty{padding:20px 0;color:#777}@media(max-width:800px){.grid,.row{grid-template-columns:1fr}.product{grid-template-columns:70px 1fr}.product .actions{grid-column:2}.product img{width:70px;height:70px}}
+</style>
 </head>
-
 <body>
-
-  <main class="admin">
-
-    <div id="netlify-login">
-
-  <p>
-    Для входа в панель управления используйте аккаунт
-    Netlify Identity.
-  </p>
-
-  <button id="login-button" type="button">
-    Войти в админку
-  </button>
-
-  <div id="message"></div>
-
+<div id="login" class="wrap login card">
+<h1>SM Flowers</h1><p class="muted">Вход в панель управления</p>
+<form id="login-form"><div class="field"><label>Email</label><input id="email" type="email" autocomplete="email" required></div><div class="field"><label>Пароль</label><input id="password" type="password" autocomplete="current-password" required></div><button class="btn" type="submit">Войти</button></form><div id="login-msg" class="msg"></div>
 </div>
-
-
-    <div class="card hidden" id="admin-card">
-
-  <h1>Букеты</h1>
-
-  <p class="subtitle">
-    Добавление нового букета
-  </p>
-
-  <form id="bouquet-form">
-
-    <label for="bouquet-name">Название букета</label>
-    <input
-      id="bouquet-name"
-      type="text"
-      placeholder="Например: Нежный"
-      required
-    >
-
-    <label for="bouquet-price">Цена</label>
-    <input
-      id="bouquet-price"
-      type="number"
-      placeholder="Например: 5900"
-      min="0"
-      required
-    >
-
-    <label for="bouquet-description">Описание</label>
-    <input
-      id="bouquet-description"
-      type="text"
-      placeholder="Короткое описание букета"
-    >
-
-    <label for="bouquet-image">Фотография</label>
-    <input
-      id="bouquet-image"
-      type="file"
-      accept="image/jpeg,image/png,image/webp"
-      required
-    >
-
-    <button type="submit">
-      Добавить букет
-    </button>
-
-  </form>
-
-  <div id="bouquet-message"></div>
-
-  <button id="logout">
-    Выйти
-  </button>
-
+<div id="app" class="wrap hidden">
+<div class="top"><div><h1>SM Flowers — админка</h1><div id="user-email" class="muted"></div></div><button id="logout" class="btn secondary">Выйти</button></div>
+<div class="tabs"><button class="tab active" data-tab="products">Букеты</button><button class="tab" data-tab="orders">Заказы</button><button class="tab" data-tab="settings">Настройки</button></div>
+<section id="products-tab"><div class="grid"><div class="card"><div class="top"><div><h2>Каталог</h2><div class="muted">Товары из Supabase</div></div><button id="new-product" class="btn">Новый букет</button></div><div id="product-list"></div></div><div class="card"><h2 id="form-title">Новый букет</h2><form id="product-form"><input id="product-id" type="hidden"><div class="field"><label>Название</label><input id="product-name" required></div><div class="row"><div class="field"><label>Цена</label><input id="product-price" type="number" min="0" step="0.01" required></div><div class="field"><label>Старая цена</label><input id="product-old-price" type="number" min="0" step="0.01"></div></div><div class="field"><label>Описание</label><textarea id="product-description"></textarea></div><div class="field"><label>Изображение</label><input id="product-image" type="file" accept="image/jpeg,image/png,image/webp"><div id="image-note" class="muted small"></div><img id="image-preview" class="preview hidden" alt=""></div><div class="row"><div class="field"><label>Порядок</label><input id="product-sort" type="number" value="0"></div><div class="field"><label>Категория</label><select id="product-category"><option value="">Без категории</option></select></div></div><div class="field"><label><input id="product-featured" type="checkbox"> Показывать как избранный</label><label><input id="product-active" type="checkbox" checked> Активен на сайте</label></div><div class="actions"><button class="btn" type="submit">Сохранить</button><button id="cancel-product" class="btn secondary" type="button">Очистить</button></div><div id="product-msg" class="msg"></div></form></div></div></section>
+<section id="orders-tab" class="hidden"><div class="card"><div class="top"><div><h2>Заказы</h2><div class="muted">Новые заказы с сайта</div></div><button id="refresh-orders" class="btn secondary">Обновить</button></div><div class="orders"><table><thead><tr><th>№</th><th>Клиент</th><th>Доставка</th><th>Состав</th><th>Сумма</th><th>Статус</th></tr></thead><tbody id="orders-body"></tbody></table></div></div></section>
+<section id="settings-tab" class="hidden"><div class="card"><h2>Настройки магазина</h2><form id="settings-form"><div class="row"><div class="field"><label>Название</label><input id="store-name"></div><div class="field"><label>Телефон</label><input id="store-phone"></div></div><div class="row"><div class="field"><label>Telegram</label><input id="store-telegram"></div><div class="field"><label>Instagram</label><input id="store-instagram"></div></div><button class="btn" type="submit">Сохранить настройки</button><div id="settings-msg" class="msg"></div></form></div></section>
 </div>
-
-  </main>
-
-
-  <script src="https://unpkg.com/netlify-identity-widget@1.9.2/build/netlify-identity-widget.js"></script>
-
 <script>
-  const loginCard = document.getElementById("login-card");
-  const adminCard = document.getElementById("admin-card");
-  const loginButton = document.getElementById("login-button");
-  const message = document.getElementById("message");
-  const logoutButton = document.getElementById("logout");
-
-  const netlifyIdentity = window.netlifyIdentity;
-
-  netlifyIdentity.on("init", user => {
-    if (user) {
-      showAdmin();
-    }
-  });
-
-  loginButton.addEventListener("click", () => {
-    netlifyIdentity.open("login");
-  });
-
-  netlifyIdentity.on("login", user => {
-    showAdmin();
-    netlifyIdentity.close();
-  });
-
-  netlifyIdentity.on("logout", () => {
-    adminCard.classList.add("hidden");
-    loginCard.classList.remove("hidden");
-  });
-
-  logoutButton.addEventListener("click", () => {
-    netlifyIdentity.logout();
-  });
-
-  function showAdmin() {
-    loginCard.classList.add("hidden");
-    adminCard.classList.remove("hidden");
-  }
+const SUPABASE_URL='https://avlozhwwvjqiypifoxox.supabase.co';
+const SUPABASE_KEY='sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+let categories=[];
+function msg(el,text,error=false){$(el).textContent=text;$(el).className='msg '+(error?'error':'success')}
+function esc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}
+async function ensureAdmin(){const {data:{user}}=await supabase.auth.getUser();if(!user)return false;const {data,error}=await supabase.rpc('is_admin');if(error||!data){await supabase.auth.signOut();return false}return true}
+async function showApp(){if(!(await ensureAdmin())){ $('login').classList.remove('hidden');$('app').classList.add('hidden');return }const {data:{user}}=await supabase.auth.getUser();$('user-email').textContent=user?.email||'';$('login').classList.add('hidden');$('app').classList.remove('hidden');await Promise.all([loadCategories(),loadProducts(),loadOrders(),loadSettings()])}
+$('login-form').addEventListener('submit',async e=>{e.preventDefault();msg('login-msg','Входим...');const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){msg('login-msg',error.message,true);return}await showApp()});
+$('logout').onclick=async()=>{await supabase.auth.signOut();$('app').classList.add('hidden');$('login').classList.remove('hidden')};
+supabase.auth.onAuthStateChange(()=>setTimeout(showApp,0));
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');['products','orders','settings'].forEach(x=>$(x+'-tab').classList.toggle('hidden',x!==b.dataset.tab))});
+async function loadCategories(){const {data,error}=await supabase.from('categories').select('id,name').eq('is_active',true).order('sort_order');if(error)return;categories=data||[];$('product-category').innerHTML='<option value="">Без категории</option>'+categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
+async function loadProducts(){const {data,error}=await supabase.from('products').select('*').order('sort_order',{ascending:true}).order('id',{ascending:true});if(error){msg('product-msg',error.message,true);return}const list=$('product-list');if(!data?.length){list.innerHTML='<div class="empty">Каталог пока пуст.</div>';return}list.innerHTML=data.map(p=>`<div class="product"><img src="${esc(p.image_url||'assets/bouquet-6.svg')}" alt=""><div><strong>${esc(p.name)}</strong><div class="small muted">${esc(p.description||'')}</div><div class="price">${Number(p.price).toLocaleString('ru-RU')} ₽ ${p.old_price?`<del class="muted">${Number(p.old_price).toLocaleString('ru-RU')} ₽</del>`:''}</div><span class="status small">${p.is_active?'Активен':'Скрыт'}${p.is_featured?' · Избранный':''}</span></div><div class="actions"><button class="btn secondary edit" data-id="${p.id}">Изменить</button><button class="btn danger delete" data-id="${p.id}">Удалить</button></div></div>`).join('');list.querySelectorAll('.edit').forEach(b=>b.onclick=()=>editProduct(data.find(p=>String(p.id)===b.dataset.id)));list.querySelectorAll('.delete').forEach(b=>b.onclick=()=>deleteProduct(b.dataset.id))}
+function resetProduct(){ $('product-form').reset();$('product-id').value='';$('product-active').checked=true;$('form-title').textContent='Новый букет';$('image-preview').classList.add('hidden');$('image-note').textContent='';msg('product-msg','')}
+function editProduct(p){$('product-id').value=p.id;$('product-name').value=p.name;$('product-price').value=p.price;$('product-old-price').value=p.old_price??'';$('product-description').value=p.description??'';$('product-sort').value=p.sort_order??0;$('product-category').value=p.category_id??'';$('product-featured').checked=!!p.is_featured;$('product-active').checked=p.is_active!==false;$('image-note').textContent=p.image_url||'Текущее изображение не задано';if(p.image_url){$('image-preview').src=p.image_url;$('image-preview').classList.remove('hidden')}else $('image-preview').classList.add('hidden');$('form-title').textContent='Редактировать букет';window.scrollTo({top:0,behavior:'smooth'})}
+$('new-product').onclick=resetProduct;$('cancel-product').onclick=resetProduct;
+async function uploadImage(file){if(!file)return null;const ext=(file.name.split('.').pop()||'jpg').toLowerCase();const path=`${crypto.randomUUID()}.${ext}`;const {error}=await supabase.storage.from('bouquets').upload(path,file,{upsert:false,contentType:file.type});if(error)throw error;const {data}=supabase.storage.from('bouquets').getPublicUrl(path);return data.publicUrl}
+$('product-image').onchange=e=>{const f=e.target.files[0];if(f){$('image-preview').src=URL.createObjectURL(f);$('image-preview').classList.remove('hidden');$('image-note').textContent=f.name}};
+$('product-form').addEventListener('submit',async e=>{e.preventDefault();try{msg('product-msg','Сохраняем...');const id=$('product-id').value;const old= id ? (await supabase.from('products').select('image_url').eq('id',id).single()).data : null;let image=old?.image_url||null;if($('product-image').files[0])image=await uploadImage($('product-image').files[0]);const payload={name:$('product-name').value.trim(),slug:$('product-name').value.trim().toLowerCase().replace(/[^a-zа-я0-9]+/gi,'-').replace(/^-|-$/g,''),price:Number($('product-price').value),old_price:$('product-old-price').value?Number($('product-old-price').value):null,description:$('product-description').value.trim()||null,image_url:image,sort_order:Number($('product-sort').value)||0,category_id:$('product-category').value?Number($('product-category').value):null,is_featured:$('product-featured').checked,is_active:$('product-active').checked};let res=id?await supabase.from('products').update(payload).eq('id',id):await supabase.from('products').insert(payload);if(res.error)throw res.error;msg('product-msg','Букет сохранён.');resetProduct();await loadProducts()}catch(err){msg('product-msg',err.message||'Не удалось сохранить букет',true)}});
+async function deleteProduct(id){if(!confirm('Удалить букет?'))return;const {error}=await supabase.from('products').delete().eq('id',id);if(error){msg('product-msg',error.message,true);return}await loadProducts()}
+async function loadOrders(){const {data,error}=await supabase.from('orders').select('id,status,total_amount,delivery_address,delivery_date,delivery_time,comment,created_at,customers(name,phone,email,telegram,instagram),order_items(product_name,quantity,price)').order('created_at',{ascending:false});const body=$('orders-body');if(error){body.innerHTML=`<tr><td colspan="6" class="error">${esc(error.message)}</td></tr>`;return}if(!data?.length){body.innerHTML='<tr><td colspan="6" class="empty">Заказов пока нет.</td></tr>';return}body.innerHTML=data.map(o=>`<tr><td>#${o.id}<div class="small muted">${new Date(o.created_at).toLocaleString('ru-RU')}</div></td><td><strong>${esc(o.customers?.name)}</strong><br>${esc(o.customers?.phone||'')}<br>${esc(o.customers?.email||'')}</td><td>${esc(o.delivery_address||'')}<br>${o.delivery_date?new Date(o.delivery_date).toLocaleDateString('ru-RU'):''} ${esc(o.delivery_time||'')}<br>${esc(o.comment||'')}</td><td>${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity}`).join('<br>')}</td><td><strong>${Number(o.total_amount).toLocaleString('ru-RU')} ₽</strong></td><td><select class="order-status" data-id="${o.id}"><option ${o.status==='new'?'selected':''} value="new">Новый</option><option ${o.status==='confirmed'?'selected':''} value="confirmed">Подтверждён</option><option ${o.status==='completed'?'selected':''} value="completed">Выполнен</option><option ${o.status==='cancelled'?'selected':''} value="cancelled">Отменён</option></select></td></tr>`).join('');body.querySelectorAll('.order-status').forEach(s=>s.onchange=async()=>{const {error}=await supabase.from('orders').update({status:s.value}).eq('id',s.dataset.id);if(error)alert(error.message)})}
+$('refresh-orders').onclick=loadOrders;
+async function loadSettings(){const {data,error}=await supabase.from('store_settings').select('*').order('id').limit(1).maybeSingle();if(error||!data)return;$('store-name').value=data.store_name||'';$('store-phone').value=data.phone||'';$('store-telegram').value=data.telegram_url||'';$('store-instagram').value=data.instagram_url||''}
+$('settings-form').addEventListener('submit',async e=>{e.preventDefault();const {data}=await supabase.from('store_settings').select('id').order('id').limit(1).maybeSingle();const payload={store_name:$('store-name').value.trim(),phone:$('store-phone').value.trim(),telegram_url:$('store-telegram').value.trim(),instagram_url:$('store-instagram').value.trim(),updated_at:new Date().toISOString()};const res=data?await supabase.from('store_settings').update(payload).eq('id',data.id):await supabase.from('store_settings').insert(payload);if(res.error)msg('settings-msg',res.error.message,true);else msg('settings-msg','Настройки сохранены.')});
+resetProduct();showApp();
 </script>
-
 </body>
 </html>
