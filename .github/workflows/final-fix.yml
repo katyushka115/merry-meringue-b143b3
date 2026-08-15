@@ -1,0 +1,44 @@
+name: Apply SM Flowers final fixes
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix links and admin login behavior
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # Public site: correct all social links, including hard-coded links.
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('https://t.me/smfloversmsk', 'https://t.me/smflowersmsk')
+          s = s.replace('https://www.instagram.com/smflovers.msk/', 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr')
+          s = s.replace('https://www.instagram.com/smflovers.msk', 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr')
+          # Avoid stale cached JS after deployment.
+          s = s.replace('src="assets/order-flow.js"', 'src="assets/order-flow.js?v=20260815-2"')
+          p.write_text(s, encoding='utf-8')
+
+          # Admin: never silently sign out on a failed admin check; show the real error.
+          p = Path('admin/index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("}catch(error){console.error('Admin login error:',error);await supabase.auth.signOut();msg('login-msg',error.message||'Не удалось войти.',true)}finally", "}catch(error){console.error('Admin login error:',error);msg('login-msg',error?.message||String(error)||'Не удалось войти.',true)}finally")
+          s = s.replace("}catch(error){console.error(error);await supabase.auth.signOut();msg('login-msg',error.message||'Не удалось восстановить сессию.',true)}});", "}catch(error){console.error('Admin session error:',error);msg('login-msg',error?.message||String(error)||'Не удалось восстановить сессию.',true)}});")
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          git config user.name 'SM Flowers Codex'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html admin/index.html
+          git diff --cached --quiet || git commit -m 'Fix production links and admin login diagnostics'
+          git push
+
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/final-fix.yml
+          git commit -m 'Remove temporary fix workflow'
+          git push
