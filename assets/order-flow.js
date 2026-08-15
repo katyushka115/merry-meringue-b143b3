@@ -16,6 +16,25 @@
   }
   function getClient() { return window.smSupabase || window.supabase || null; }
 
+  function installMobileModalStyles() {
+    if (document.getElementById('smflowers-runtime-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'smflowers-runtime-styles';
+    style.textContent = `
+      #order-modal { overflow-y:auto !important; -webkit-overflow-scrolling:touch; padding:16px; }
+      #order-modal .modal-content, #order-modal .modal-inner, #order-modal .modal-dialog, #order-modal .modal-box { max-height:calc(100dvh - 32px); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+      #order-modal .modal-actions { max-height:calc(100dvh - 100px); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+      #order-modal form { padding-bottom:24px; }
+      #order-modal input, #order-modal textarea, #order-modal button { font-size:16px; }
+      @media (max-width:600px) {
+        #order-modal { align-items:flex-start !important; padding:10px !important; }
+        #order-modal .modal-content, #order-modal .modal-inner, #order-modal .modal-dialog, #order-modal .modal-box { width:100%; max-height:calc(100dvh - 20px); }
+        #order-modal .modal-actions { max-height:none; overflow:visible; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function setSocialLinks(telegramUrl = FALLBACK_TELEGRAM, instagramUrl = FALLBACK_INSTAGRAM) {
     const tg = telegramUrl || FALLBACK_TELEGRAM;
     const ig = instagramUrl || FALLBACK_INSTAGRAM;
@@ -39,8 +58,15 @@
     } catch (e) { setSocialLinks(); }
   }
 
+  function cacheBustedImage(url, updatedAt) {
+    if (!url) return '';
+    if (!updatedAt || /^data:/.test(url)) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(updatedAt)}`;
+  }
+
   function makeProductCard(product, index) {
-    return `<article class="product visible" data-reveal="false"><div class="product-image"><span class="product-number">${String(index + 1).padStart(2, '0')}</span><img src="${escapeHtml(product.image_url || `assets/bouquet-${(index % 6) + 1}.svg`)}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.onerror=null;this.src='assets/bouquet-${(index % 6) + 1}.svg'"></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.description || '')}</p><p style="margin-top:8px"><strong>${Number(product.price).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button></div></article>`;
+    const image = cacheBustedImage(product.image_url || `assets/bouquet-${(index % 6) + 1}.svg`, product.updated_at);
+    return `<article class="product visible" data-reveal="false"><div class="product-image"><span class="product-number">${String(index + 1).padStart(2, '0')}</span><img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="eager" onerror="this.onerror=null;this.src='assets/bouquet-${(index % 6) + 1}.svg'"></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.description || '')}</p><p style="margin-top:8px"><strong>${Number(product.price).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button></div></article>`;
   }
 
   function renderProducts(products) {
@@ -52,7 +78,7 @@
 
   async function loadProducts(client) {
     try {
-      const { data, error } = await client.from('products').select('id,name,description,price,image_url,is_active,is_featured,sort_order,created_at').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+      const { data, error } = await client.from('products').select('id,name,description,price,image_url,is_active,is_featured,sort_order,created_at,updated_at').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: false });
       if (error) throw error;
       renderProducts(data?.length ? data : FALLBACK_PRODUCTS);
     } catch (error) { console.error('SM Flowers catalog error:', error); renderProducts(FALLBACK_PRODUCTS); }
@@ -70,8 +96,8 @@
     catalogObserver.observe(grid, { childList: true, subtree: true });
   }
 
-  function openOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); document.body.classList.add('modal-open'); }
-  function closeOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); document.body.classList.remove('modal-open'); }
+  function openOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open'); setTimeout(() => modal.querySelector('input, textarea, button[type="submit"]')?.focus({preventScroll:true}), 50); }
+  function closeOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open'); }
 
   function renderOrderForm(product) {
     const modal = document.getElementById('order-modal');
@@ -118,6 +144,7 @@
   }
 
   async function init() {
+    installMobileModalStyles();
     const client = getClient();
     if (!client) { setSocialLinks(); setTimeout(init, 300); return; }
     bindInteractions(); setSocialLinks(); guardAgainstLegacyCatalog(client);
