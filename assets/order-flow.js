@@ -1,26 +1,104 @@
 (() => {
-  const supabaseClient = window.smSupabase || window.supabase;
-  if (!supabaseClient) return;
-
   let selectedProduct = null;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
   }
 
-  async function loadStoreSettings() {
-    const { data } = await supabaseClient.from('store_settings').select('store_name,phone,telegram_url,instagram_url').limit(1).maybeSingle();
+  function getClient() {
+    return window.smSupabase || window.supabase || null;
+  }
+
+  function setSocialLinks(telegramUrl, instagramUrl) {
+    document.querySelectorAll('a').forEach(link => {
+      const href = String(link.getAttribute('href') || '').toLowerCase();
+      const text = String(link.textContent || '').toLowerCase();
+      const label = String(link.getAttribute('aria-label') || '').toLowerCase();
+      if (telegramUrl && (href.includes('t.me/') || text.includes('telegram') || label.includes('telegram'))) {
+        link.href = telegramUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      if (instagramUrl && (href.includes('instagram.com/') || text.includes('instagram') || label.includes('instagram'))) {
+        link.href = instagramUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+    });
+  }
+
+  async function loadStoreSettings(client) {
+    const { data, error } = await client.from('store_settings').select('store_name,phone,telegram_url,instagram_url').limit(1).maybeSingle();
+    if (error) {
+      console.error('Не удалось загрузить настройки магазина:', error);
+      return;
+    }
     if (!data) return;
+
     if (data.store_name) {
       document.querySelectorAll('.brand strong,.footer-brand').forEach(el => { el.textContent = data.store_name; });
       document.title = `${data.store_name} — авторская флористика в Москве`;
     }
     if (data.phone) {
       const cleanPhone = data.phone.replace(/[^+\d]/g, '');
-      document.querySelectorAll('a[href^="tel:"]').forEach(el => { el.href = `tel:${cleanPhone}`; el.textContent = data.phone; });
+      document.querySelectorAll('a[href^="tel:"]').forEach(el => {
+        el.href = `tel:${cleanPhone}`;
+        if (el.textContent.trim()) el.textContent = data.phone;
+      });
     }
-    if (data.telegram_url) document.querySelectorAll('a[href*="t.me/"]').forEach(el => { el.href = data.telegram_url; });
-    if (data.instagram_url) document.querySelectorAll('a[href*="instagram.com/"]').forEach(el => { el.href = data.instagram_url; });
+    setSocialLinks(data.telegram_url, data.instagram_url);
+  }
+
+  function productImage(product, index) {
+    return product.image_url || `assets/bouquet-${(index % 6) + 1}.svg`;
+  }
+
+  function renderProducts(products) {
+    const grid = document.querySelector('.product-grid');
+    if (!grid) return;
+
+    if (!products.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 0;text-align:center;color:rgba(31,38,30,.65)">Каталог скоро пополнится. Загляните позже.</div>';
+      return;
+    }
+
+    grid.innerHTML = products.map((product, index) => `
+      <article class="product">
+        <div class="product-image">
+          <img src="${escapeHtml(productImage(product, index))}" alt="${escapeHtml(product.name)}" loading="lazy">
+        </div>
+        <div class="product-info" style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding-top:18px">
+          <div>
+            <h3 style="margin:0 0 5px;font-family:var(--serif);font-size:30px;font-weight:400;line-height:1">${escapeHtml(product.name)}</h3>
+            <div style="font-size:12px;letter-spacing:.08em">${Number(product.price).toLocaleString('ru-RU')} ₽</div>
+          </div>
+          <button class="button button--outline" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  async function loadProducts(client) {
+    const { data, error } = await client
+      .from('products')
+      .select('id,name,price,image_url,is_active,is_featured')
+      .eq('is_active', true)
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Не удалось загрузить каталог:', error);
+      return;
+    }
+    renderProducts(data || []);
+  }
+
+  function openOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (!modal) return;
+    modal.classList.add('is-open');
+    modal.removeAttribute('hidden');
+    document.body.classList.add('modal-open');
   }
 
   function renderOrderForm(product) {
@@ -45,11 +123,16 @@
         <div id="public-order-msg" aria-live="polite"></div>
       </form>`;
 
-    document.getElementById('public-order-form').addEventListener('submit', submitOrder);
+    const form = document.getElementById('public-order-form');
+    form.addEventListener('submit', submitOrder);
+    openOrderModal();
   }
 
   async function submitOrder(event) {
     event.preventDefault();
+    const client = getClient();
+    if (!client || !selectedProduct) return;
+
     const form = event.currentTarget;
     const msg = document.getElementById('public-order-msg');
     const submit = form.querySelector('button[type="submit"]');
@@ -59,7 +142,7 @@
     msg.textContent = '';
 
     try {
-      const { data: orderId, error } = await supabaseClient.rpc('create_public_order', {
+      const { data: orderId, error } = await client.rpc('create_public_order', {
         p_customer_name: String(data.get('name') || '').trim(),
         p_phone: String(data.get('phone') || '').trim(),
         p_email: String(data.get('email') || '').trim() || null,
@@ -89,17 +172,42 @@
     }
   }
 
-  document.addEventListener('click', async event => {
-    const button = event.target.closest('[data-bouquet]');
-    if (!button) return;
-    event.preventDefault();
-    const name = button.dataset.bouquet;
-    const { data, error } = await supabaseClient.from('products').select('id,name,price,image_url').eq('name', name).eq('is_active', true).limit(1).maybeSingle();
-    if (error || !data) return;
+  async function selectProduct(productId) {
+    const client = getClient();
+    if (!client) return;
+    const { data, error } = await client.from('products').select('id,name,price,image_url').eq('id', productId).eq('is_active', true).maybeSingle();
+    if (error || !data) {
+      console.error('Не удалось выбрать товар:', error);
+      return;
+    }
     const selected = document.getElementById('selected-bouquet');
     if (selected) selected.textContent = `Вы выбрали: «${data.name}»`;
     renderOrderForm(data);
-  }, true);
+  }
 
-  loadStoreSettings();
+  function bindInteractions() {
+    document.addEventListener('click', event => {
+      const button = event.target.closest('[data-product-id]');
+      if (button) {
+        event.preventDefault();
+        selectProduct(button.dataset.productId);
+      }
+    });
+  }
+
+  async function init() {
+    const client = getClient();
+    if (!client) {
+      setTimeout(init, 300);
+      return;
+    }
+    bindInteractions();
+    await Promise.all([loadStoreSettings(client), loadProducts(client)]);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 })();
