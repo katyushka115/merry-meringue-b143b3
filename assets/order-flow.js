@@ -3,6 +3,9 @@
   let initialized = false;
   let catalogObserver = null;
   let catalogReloadTimer = null;
+  let supabaseClient = null;
+  const SUPABASE_URL = 'https://avlozhwwvjqiypifoxox.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_7rQ1Gq5p2x9m8n6v4c3b2a1z0y9x8w7v';
   const FALLBACK_TELEGRAM = 'https://t.me/smflowersmsk';
   const FALLBACK_INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
   const FALLBACK_PRODUCTS = [
@@ -14,7 +17,17 @@
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>\"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#039;' }[c]));
   }
-  function getClient() { return window.smSupabase || window.supabase || null; }
+
+  function getClient() {
+    if (supabaseClient && typeof supabaseClient.rpc === 'function') return supabaseClient;
+    if (window.smSupabase && typeof window.smSupabase.rpc === 'function') { supabaseClient = window.smSupabase; return supabaseClient; }
+    const sdk = window.supabase;
+    if (sdk && typeof sdk.rpc === 'function') { supabaseClient = sdk; return supabaseClient; }
+    if (sdk && typeof sdk.createClient === 'function') {
+      try { supabaseClient = sdk.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY); return supabaseClient; } catch (e) { console.error('Supabase client init failed:', e); }
+    }
+    return null;
+  }
 
   function installMobileModalStyles() {
     if (document.getElementById('smflowers-runtime-styles')) return;
@@ -113,7 +126,13 @@
 
   async function submitOrder(event) {
     event.preventDefault();
-    const client = getClient(); if (!client || !selectedProduct) return;
+    const client = getClient();
+    if (!client || typeof client.rpc !== 'function') {
+      const msg = document.getElementById('public-order-msg');
+      if (msg) { msg.textContent = 'Не удалось подключиться к системе заказов. Обновите страницу и попробуйте ещё раз.'; msg.style.color = '#b3261e'; }
+      return;
+    }
+    if (!selectedProduct) return;
     const form = event.currentTarget, msg = document.getElementById('public-order-msg'), submit = form.querySelector('button[type="submit"]'), data = new FormData(form);
     submit.disabled = true; submit.textContent = 'Отправляем…'; msg.textContent = '';
     try {
