@@ -65,14 +65,16 @@
     grid.innerHTML = products.map((product, index) => `
       <article class="product">
         <div class="product-image">
+          <span class="product-number">${String(index + 1).padStart(2, '0')}</span>
           <img src="${escapeHtml(productImage(product, index))}" alt="${escapeHtml(product.name)}" loading="lazy">
         </div>
-        <div class="product-info" style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding-top:18px">
+        <div class="product-info">
           <div>
-            <h3 style="margin:0 0 5px;font-family:var(--serif);font-size:30px;font-weight:400;line-height:1">${escapeHtml(product.name)}</h3>
-            <div style="font-size:12px;letter-spacing:.08em">${Number(product.price).toLocaleString('ru-RU')} ₽</div>
+            <h3>${escapeHtml(product.name)}</h3>
+            <p>${escapeHtml(product.description || '')}</p>
+            <p style="margin-top:8px"><strong>${Number(product.price).toLocaleString('ru-RU')} ₽</strong></p>
           </div>
-          <button class="button button--outline" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button>
+          <button class="order-button" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button>
         </div>
       </article>
     `).join('');
@@ -81,9 +83,9 @@
   async function loadProducts(client) {
     const { data, error } = await client
       .from('products')
-      .select('id,name,price,image_url,is_active,is_featured')
+      .select('id,name,description,price,image_url,is_active,is_featured,sort_order,created_at')
       .eq('is_active', true)
-      .order('is_featured', { ascending: false })
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -96,8 +98,8 @@
   function openOrderModal() {
     const modal = document.getElementById('order-modal');
     if (!modal) return;
-    modal.classList.add('is-open');
-    modal.removeAttribute('hidden');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
   }
 
@@ -107,6 +109,9 @@
     if (!modal || !actions) return;
 
     selectedProduct = product;
+    const selected = document.getElementById('selected-bouquet');
+    if (selected) selected.textContent = `Вы выбрали: «${product.name}»`;
+
     actions.innerHTML = `
       <form id="public-order-form" style="width:100%;display:grid;gap:14px;text-align:left">
         <div style="font-weight:600">${escapeHtml(product.name)} · ${Number(product.price).toLocaleString('ru-RU')} ₽</div>
@@ -123,8 +128,7 @@
         <div id="public-order-msg" aria-live="polite"></div>
       </form>`;
 
-    const form = document.getElementById('public-order-form');
-    form.addEventListener('submit', submitOrder);
+    document.getElementById('public-order-form').addEventListener('submit', submitOrder);
     openOrderModal();
   }
 
@@ -180,8 +184,6 @@
       console.error('Не удалось выбрать товар:', error);
       return;
     }
-    const selected = document.getElementById('selected-bouquet');
-    if (selected) selected.textContent = `Вы выбрали: «${data.name}»`;
     renderOrderForm(data);
   }
 
