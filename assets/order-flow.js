@@ -1,43 +1,145 @@
 (() => {
+  const SUPABASE_URL = 'https://avlozhwwvjqiypifoxox.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
+  const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  const TELEGRAM = 'https://t.me/smflowersmsk';
+  const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
+  let client = null;
   let selectedProduct = null;
-  let initialized = false;
-  let catalogObserver = null;
-  let catalogReloadTimer = null;
-  let supabaseClient = null;
-  const SUPABASE_URL = window.SM_SUPABASE_CONFIG?.url || 'https://avlozhwwvjqiypifoxox.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY = window.SM_SUPABASE_CONFIG?.publishableKey || '';
-  const FALLBACK_TELEGRAM = 'https://t.me/smflowersmsk';
-  const FALLBACK_INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
-  const FALLBACK_PRODUCTS = [
-    { id: 1, name: 'Букет нежных роз', description: 'Нежная композиция из свежих роз.', price: 2500, image_url: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946', is_active: true, sort_order: 1 },
-    { id: 2, name: 'Букет тюльпанов', description: 'Свежие тюльпаны в лёгкой весенней композиции.', price: 1800, image_url: 'https://images.unsplash.com/photo-1520763185298-1b434c919102', is_active: true, sort_order: 2 },
-    { id: 3, name: 'Букет полевых цветов', description: 'Природная композиция с полевыми цветами.', price: 2000, image_url: 'https://images.unsplash.com/photo-1495231916356-a86217efff12', is_active: true, sort_order: 3 }
-  ];
-  function escapeHtml(value) { return String(value ?? '').replace(/[&<>\"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#039;' }[c])); }
-  function getClient() {
-    if (supabaseClient && typeof supabaseClient.rpc === 'function') return supabaseClient;
-    if (window.smSupabase && typeof window.smSupabase.rpc === 'function') { supabaseClient = window.smSupabase; return supabaseClient; }
-    const sdk = window.supabase;
-    if (sdk && typeof sdk.rpc === 'function') { supabaseClient = sdk; return supabaseClient; }
-    if (sdk && typeof sdk.createClient === 'function' && SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) {
-      try { supabaseClient = sdk.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY); return supabaseClient; } catch (e) { console.error('Supabase client init failed:', e); }
-    }
-    return null;
+
+  const esc = v => String(v ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-sm-supabase="${src}"]`);
+      if (existing) { existing.addEventListener('load', resolve, {once:true}); existing.addEventListener('error', reject, {once:true}); return; }
+      const s = document.createElement('script');
+      s.type = 'module'; s.src = src; s.dataset.smSupabase = src;
+      s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+    });
   }
-  function installMobileModalStyles() { if (document.getElementById('smflowers-runtime-styles')) return; const style = document.createElement('style'); style.id = 'smflowers-runtime-styles'; style.textContent = `#order-modal{overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding:16px}#order-modal .modal-content,#order-modal .modal-inner,#order-modal .modal-dialog,#order-modal .modal-box{max-height:calc(100dvh - 32px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}#order-modal .modal-actions{max-height:calc(100dvh - 100px);overflow-y:auto;-webkit-overflow-scrolling:touch}#order-modal form{padding-bottom:24px}#order-modal input,#order-modal textarea,#order-modal button{font-size:16px}@media(max-width:600px){#order-modal{align-items:flex-start!important;padding:10px!important}#order-modal .modal-content,#order-modal .modal-inner,#order-modal .modal-dialog,#order-modal .modal-box{width:100%;max-height:calc(100dvh - 20px)}#order-modal .modal-actions{max-height:none;overflow:visible}}`; document.head.appendChild(style); }
-  function setSocialLinks(telegramUrl = FALLBACK_TELEGRAM, instagramUrl = FALLBACK_INSTAGRAM) { const tg = telegramUrl || FALLBACK_TELEGRAM, ig = instagramUrl || FALLBACK_INSTAGRAM; document.querySelectorAll('a').forEach(link => { const href = String(link.getAttribute('href') || '').toLowerCase(), text = String(link.textContent || '').toLowerCase(), label = String(link.getAttribute('aria-label') || '').toLowerCase(); if (href.includes('t.me/') || text.includes('telegram') || label.includes('telegram')) { link.href = tg; link.target = '_blank'; link.rel = 'noopener noreferrer'; } if (href.includes('instagram.com/') || text.includes('instagram') || label.includes('instagram')) { link.href = ig; link.target = '_blank'; link.rel = 'noopener noreferrer'; } }); }
-  async function loadStoreSettings(client) { setSocialLinks(); try { const { data, error } = await client.from('store_settings').select('store_name,phone,telegram_url,instagram_url').limit(1).maybeSingle(); if (error || !data) return; if (data.store_name) { document.querySelectorAll('.brand strong,.footer-brand').forEach(el => el.textContent = data.store_name); document.title = `${data.store_name} — авторская флористика в Москве`; } if (data.phone) { const cleanPhone = data.phone.replace(/[^+\d]/g, ''); document.querySelectorAll('a[href^="tel:"]').forEach(el => { el.href = `tel:${cleanPhone}`; if (el.textContent.trim()) el.textContent = data.phone; }); } setSocialLinks(data.telegram_url, data.instagram_url); } catch (e) { setSocialLinks(); } }
-  function cacheBustedImage(url, updatedAt) { if (!url) return ''; if (!updatedAt || /^data:/.test(url)) return url; return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(updatedAt)}`; }
-  function makeProductCard(product, index) { const image = cacheBustedImage(product.image_url || `assets/bouquet-${(index % 6) + 1}.svg`, product.updated_at); return `<article class="product visible" data-reveal="false"><div class="product-image"><span class="product-number">${String(index + 1).padStart(2, '0')}</span><img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="eager" onerror="this.onerror=null;this.src='assets/bouquet-${(index % 6) + 1}.svg'"></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.description || '')}</p><p style="margin-top:8px"><strong>${Number(product.price).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button></div></article>`; }
-  function renderProducts(products) { const grid = document.querySelector('.product-grid'); if (!grid) return; if (!products.length) { grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 0;text-align:center">Каталог скоро пополнится.</div>'; return; } grid.innerHTML = products.map(makeProductCard).join(''); }
-  async function loadProducts(client) { try { const { data, error } = await client.from('products').select('id,name,description,price,image_url,is_active,is_featured,sort_order,created_at,updated_at').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: false }); if (error) throw error; renderProducts(data?.length ? data : FALLBACK_PRODUCTS); } catch (error) { console.error('SM Flowers catalog error:', error); renderProducts(FALLBACK_PRODUCTS); } }
-  function guardAgainstLegacyCatalog(client) { const grid = document.querySelector('.product-grid'); if (!grid || catalogObserver) return; catalogObserver = new MutationObserver(() => { if (!grid.querySelector('[data-product-id]') && grid.querySelector('[data-bouquet]')) { clearTimeout(catalogReloadTimer); catalogReloadTimer = setTimeout(() => loadProducts(client), 0); } }); catalogObserver.observe(grid, { childList: true, subtree: true }); }
-  function openOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open'); setTimeout(() => modal.querySelector('input, textarea, button[type="submit"]')?.focus({preventScroll:true}), 50); }
-  function closeOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open'); }
-  function renderOrderForm(product) { const modal = document.getElementById('order-modal'), actions = modal?.querySelector('.modal-actions'); if (!modal || !actions) return; selectedProduct = product; const selected = document.getElementById('selected-bouquet'); if (selected) selected.textContent = `Вы выбрали: «${product.name}»`; actions.innerHTML = `<form id="public-order-form" style="width:100%;display:grid;gap:14px;text-align:left"><div style="font-weight:600">${escapeHtml(product.name)} · ${Number(product.price).toLocaleString('ru-RU')} ₽</div><label>Имя<input name="name" required autocomplete="name" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px"></label><label>Телефон<input name="phone" required autocomplete="tel" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px"></label><label>Email<input name="email" type="email" autocomplete="email" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px"></label><label>Адрес доставки<input name="address" autocomplete="street-address" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px"></label><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Дата<input name="date" type="date" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px"></label><label>Время<input name="time" placeholder="например, 18:00–20:00" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px"></label></div><label>Комментарий<textarea name="comment" rows="3" style="width:100%;padding:12px;border:1px solid #d9d4cc;margin-top:5px;resize:vertical"></textarea></label><button class="button" type="submit">Оформить заказ</button><div id="public-order-msg" aria-live="polite"></div></form>`; document.getElementById('public-order-form')?.addEventListener('submit', submitOrder); openOrderModal(); }
-  async function submitOrder(event) { event.preventDefault(); const client = getClient(); if (!client || typeof client.rpc !== 'function') { const msg = document.getElementById('public-order-msg'); if (msg) { msg.textContent = 'Не удалось подключиться к системе заказов. Обновите страницу и попробуйте ещё раз.'; msg.style.color = '#b3261e'; } return; } if (!selectedProduct) return; const form = event.currentTarget, msg = document.getElementById('public-order-msg'), submit = form.querySelector('button[type="submit"]'), data = new FormData(form); submit.disabled = true; submit.textContent = 'Отправляем…'; msg.textContent = ''; try { const { data: orderId, error } = await client.rpc('create_public_order', { p_customer_name:String(data.get('name')||'').trim(), p_phone:String(data.get('phone')||'').trim(), p_email:String(data.get('email')||'').trim()||null, p_telegram:null, p_instagram:null, p_delivery_address:String(data.get('address')||'').trim()||null, p_delivery_date:String(data.get('date')||'')||null, p_delivery_time:String(data.get('time')||'').trim()||null, p_comment:String(data.get('comment')||'').trim()||null, p_items:[{product_id:selectedProduct.id,quantity:1}] }); if (error) throw error; form.innerHTML = `<div style="text-align:center;padding:18px 0"><h3 style="font-family:var(--serif);font-size:36px;margin:0 0 12px">Заказ принят</h3><p>Спасибо! Ваш заказ <strong>#${escapeHtml(orderId)}</strong> получен. Мы свяжемся с вами для подтверждения деталей.</p><button type="button" class="button" id="order-done">Закрыть</button></div>`; document.getElementById('order-done')?.addEventListener('click', closeOrderModal); } catch (error) { msg.textContent = error?.message || 'Не удалось оформить заказ. Попробуйте ещё раз.'; msg.style.color = '#b3261e'; submit.disabled = false; submit.textContent = 'Оформить заказ'; } }
-  async function selectProduct(productId) { const client = getClient(); if (!client) { const fallback = FALLBACK_PRODUCTS.find(p => String(p.id) === String(productId)); if (fallback) renderOrderForm(fallback); return; } try { const { data, error } = await client.from('products').select('id,name,price,image_url').eq('id', productId).eq('is_active', true).maybeSingle(); if (error || !data) throw error || new Error('Букет недоступен'); renderOrderForm(data); } catch (error) { const fallback = FALLBACK_PRODUCTS.find(p => String(p.id) === String(productId)); if (fallback) renderOrderForm(fallback); } }
-  function bindInteractions() { if (initialized) return; initialized = true; document.addEventListener('click', event => { const button = event.target.closest('[data-product-id]'); if (button) { event.preventDefault(); selectProduct(button.dataset.productId); return; } if (event.target.closest('.modal-close')) closeOrderModal(); if (event.target.id === 'order-modal') closeOrderModal(); }); document.addEventListener('keydown', event => { if (event.key === 'Escape') closeOrderModal(); }); }
-  async function init() { installMobileModalStyles(); const client = getClient(); if (!client) { setSocialLinks(); setTimeout(init, 300); return; } bindInteractions(); setSocialLinks(); guardAgainstLegacyCatalog(client); await Promise.all([loadStoreSettings(client), loadProducts(client)]); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
+
+  async function getClient() {
+    if (client?.rpc) return client;
+    if (window.smSupabase?.rpc) { client = window.smSupabase; return client; }
+    if (window.supabase?.createClient) { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY); return client; }
+    if (!window.__smSupabaseModulePromise) {
+      window.__smSupabaseModulePromise = import(SUPABASE_CDN).then(mod => {
+        const createClient = mod.createClient || mod.default?.createClient;
+        if (!createClient) throw new Error('Supabase SDK не загрузился');
+        return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+      });
+    }
+    client = await window.__smSupabaseModulePromise;
+    window.smSupabase = client;
+    return client;
+  }
+
+  function socialLinks(settings = {}) {
+    const tg = settings.telegram_url || TELEGRAM, ig = settings.instagram_url || INSTAGRAM;
+    document.querySelectorAll('a').forEach(a => {
+      const h = (a.getAttribute('href') || '').toLowerCase();
+      const t = (a.textContent || '').toLowerCase();
+      const l = (a.getAttribute('aria-label') || '').toLowerCase();
+      if (h.includes('t.me/') || t.includes('telegram') || l.includes('telegram')) { a.href = tg; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+      if (h.includes('instagram.com/') || t.includes('instagram') || l.includes('instagram')) { a.href = ig; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    });
+  }
+
+  function renderProducts(products) {
+    const grid = document.querySelector('.product-grid');
+    if (!grid) return;
+    if (!products.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px">Каталог скоро пополнится.</p>'; return; }
+    grid.innerHTML = products.map((p, i) => `
+      <article class="product visible" data-reveal="false">
+        <div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(p.image_url || `assets/bouquet-${(i%6)+1}.svg`)}" alt="${esc(p.name)}" loading="eager" onerror="this.onerror=null;this.src='assets/bouquet-${(i%6)+1}.svg'"></div>
+        <div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description || '')}</p><p><strong>${Number(p.price || 0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${esc(p.id)}">Заказать</button></div>
+      </article>`).join('');
+  }
+
+  async function loadCatalog() {
+    const db = await getClient();
+    const { data, error } = await db.from('products').select('id,name,description,price,image_url,is_active,sort_order,created_at,updated_at').eq('is_active', true).order('sort_order', {ascending:true}).order('created_at', {ascending:false});
+    if (error) throw error;
+    renderProducts(data || []);
+  }
+
+  function openModal() {
+    const m = document.getElementById('order-modal');
+    if (!m) return;
+    m.classList.add('open'); m.setAttribute('aria-hidden','false'); document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+  }
+  function closeModal() {
+    const m = document.getElementById('order-modal');
+    if (!m) return;
+    m.classList.remove('open'); m.setAttribute('aria-hidden','true'); document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+  }
+
+  function showOrderForm(p) {
+    const modal = document.getElementById('order-modal'), actions = modal?.querySelector('.modal-actions');
+    if (!modal || !actions) return;
+    selectedProduct = p;
+    const selected = document.getElementById('selected-bouquet');
+    if (selected) selected.textContent = `Вы выбрали: «${p.name}»`;
+    actions.innerHTML = `<form id="public-order-form" style="display:grid;gap:14px;text-align:left;width:100%">
+      <div><strong>${esc(p.name)}</strong> · ${Number(p.price || 0).toLocaleString('ru-RU')} ₽</div>
+      <label>Имя<input name="name" required autocomplete="name"></label>
+      <label>Телефон<input name="phone" required autocomplete="tel"></label>
+      <label>Email<input name="email" type="email" autocomplete="email"></label>
+      <label>Адрес доставки<input name="address" autocomplete="street-address"></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Дата<input name="date" type="date"></label><label>Время<input name="time" placeholder="18:00–20:00"></label></div>
+      <label>Комментарий<textarea name="comment" rows="3"></textarea></label>
+      <button class="button" type="submit">Оформить заказ</button>
+      <div id="public-order-msg" aria-live="polite"></div>
+    </form>`;
+    actions.querySelector('form').addEventListener('submit', submitOrder);
+    openModal();
+  }
+
+  async function submitOrder(e) {
+    e.preventDefault();
+    const form = e.currentTarget, msg = form.querySelector('#public-order-msg'), button = form.querySelector('button[type="submit"]');
+    button.disabled = true; button.textContent = 'Отправляем…'; msg.textContent = '';
+    try {
+      const db = await getClient();
+      const fd = new FormData(form);
+      const { data: orderId, error } = await db.rpc('create_public_order', {
+        p_customer_name: String(fd.get('name') || '').trim(), p_phone: String(fd.get('phone') || '').trim(), p_email: String(fd.get('email') || '').trim() || null,
+        p_telegram: null, p_instagram: null, p_delivery_address: String(fd.get('address') || '').trim() || null,
+        p_delivery_date: String(fd.get('date') || '') || null, p_delivery_time: String(fd.get('time') || '').trim() || null,
+        p_comment: String(fd.get('comment') || '').trim() || null, p_items: [{product_id: selectedProduct.id, quantity: 1}]
+      });
+      if (error) throw error;
+      form.innerHTML = `<div style="text-align:center;padding:20px"><h3>Заказ принят</h3><p>Ваш заказ <strong>#${esc(orderId)}</strong> получен. Мы свяжемся с вами для подтверждения.</p><button type="button" class="button" id="order-done">Закрыть</button></div>`;
+      form.querySelector('#order-done').addEventListener('click', closeModal);
+    } catch (err) {
+      msg.textContent = err?.message || 'Не удалось оформить заказ. Попробуйте ещё раз.'; msg.style.color = '#b3261e'; button.disabled = false; button.textContent = 'Оформить заказ';
+    }
+  }
+
+  async function init() {
+    socialLinks();
+    try {
+      const db = await getClient();
+      try { const {data} = await db.from('store_settings').select('store_name,phone,telegram_url,instagram_url').limit(1).maybeSingle(); if (data) socialLinks(data); } catch (_) {}
+      await loadCatalog();
+    } catch (err) {
+      console.error('SM Flowers startup error:', err);
+      const grid = document.querySelector('.product-grid');
+      if (grid) grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px">Не удалось загрузить каталог. Попробуйте обновить страницу.</p>';
+    }
+  }
+
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-product-id]');
+    if (b) {
+      e.preventDefault();
+      try { const db = await getClient(); const {data,error} = await db.from('products').select('id,name,description,price,image_url').eq('id', b.dataset.productId).eq('is_active',true).maybeSingle(); if (error) throw error; if (data) showOrderForm(data); }
+      catch (err) { console.error(err); }
+      return;
+    }
+    if (e.target.closest('.modal-close') || e.target.id === 'order-modal') closeModal();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true}); else init();
 })();
