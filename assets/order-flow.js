@@ -8,6 +8,21 @@
     return String(value ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
   }
 
+  async function loadStoreSettings() {
+    const { data } = await supabaseClient.from('store_settings').select('store_name,phone,telegram_url,instagram_url').limit(1).maybeSingle();
+    if (!data) return;
+    if (data.store_name) {
+      document.querySelectorAll('.brand strong,.footer-brand').forEach(el => { el.textContent = data.store_name; });
+      document.title = `${data.store_name} — авторская флористика в Москве`;
+    }
+    if (data.phone) {
+      const cleanPhone = data.phone.replace(/[^+\d]/g, '');
+      document.querySelectorAll('a[href^="tel:"]').forEach(el => { el.href = `tel:${cleanPhone}`; el.textContent = data.phone; });
+    }
+    if (data.telegram_url) document.querySelectorAll('a[href*="t.me/"]').forEach(el => { el.href = data.telegram_url; });
+    if (data.instagram_url) document.querySelectorAll('a[href*="instagram.com/"]').forEach(el => { el.href = data.instagram_url; });
+  }
+
   function renderOrderForm(product) {
     const modal = document.getElementById('order-modal');
     const actions = modal?.querySelector('.modal-actions');
@@ -30,8 +45,7 @@
         <div id="public-order-msg" aria-live="polite"></div>
       </form>`;
 
-    const form = document.getElementById('public-order-form');
-    form.addEventListener('submit', submitOrder);
+    document.getElementById('public-order-form').addEventListener('submit', submitOrder);
   }
 
   async function submitOrder(event) {
@@ -65,9 +79,7 @@
           <p>Спасибо! Ваш заказ <strong>#${escapeHtml(orderId)}</strong> получен. Мы свяжемся с вами для подтверждения деталей.</p>
           <button type="button" class="button" id="order-done">Закрыть</button>
         </div>`;
-      document.getElementById('order-done').addEventListener('click', () => {
-        document.querySelector('.modal-close')?.click();
-      });
+      document.getElementById('order-done').addEventListener('click', () => document.querySelector('.modal-close')?.click());
     } catch (error) {
       console.error('Ошибка оформления заказа:', error);
       msg.textContent = error?.message || 'Не удалось оформить заказ. Попробуйте ещё раз.';
@@ -82,16 +94,12 @@
     if (!button) return;
     event.preventDefault();
     const name = button.dataset.bouquet;
-    const { data, error } = await supabaseClient
-      .from('products')
-      .select('id,name,price,image_url')
-      .eq('name', name)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await supabaseClient.from('products').select('id,name,price,image_url').eq('name', name).eq('is_active', true).limit(1).maybeSingle();
     if (error || !data) return;
     const selected = document.getElementById('selected-bouquet');
     if (selected) selected.textContent = `Вы выбрали: «${data.name}»`;
     renderOrderForm(data);
   }, true);
+
+  loadStoreSettings();
 })();
