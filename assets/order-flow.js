@@ -2,6 +2,7 @@
   let selectedProduct = null;
   let initialized = false;
   let catalogObserver = null;
+  let catalogReloadTimer = null;
   const FALLBACK_TELEGRAM = 'https://t.me/smflowersmsk';
   const FALLBACK_INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
   const FALLBACK_PRODUCTS = [
@@ -39,7 +40,7 @@
   }
 
   function makeProductCard(product, index) {
-    return `<article class="product" data-reveal="false"><div class="product-image"><span class="product-number">${String(index + 1).padStart(2, '0')}</span><img src="${escapeHtml(product.image_url || `assets/bouquet-${(index % 6) + 1}.svg`)}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.onerror=null;this.src='assets/bouquet-${(index % 6) + 1}.svg'"></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.description || '')}</p><p style="margin-top:8px"><strong>${Number(product.price).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button></div></article>`;
+    return `<article class="product visible" data-reveal="false"><div class="product-image"><span class="product-number">${String(index + 1).padStart(2, '0')}</span><img src="${escapeHtml(product.image_url || `assets/bouquet-${(index % 6) + 1}.svg`)}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.onerror=null;this.src='assets/bouquet-${(index % 6) + 1}.svg'"></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.description || '')}</p><p style="margin-top:8px"><strong>${Number(product.price).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${escapeHtml(product.id)}">Заказать</button></div></article>`;
   }
 
   function renderProducts(products) {
@@ -47,7 +48,6 @@
     if (!grid) return;
     if (!products.length) { grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 0;text-align:center">Каталог скоро пополнится.</div>'; return; }
     grid.innerHTML = products.map(makeProductCard).join('');
-    grid.querySelectorAll('[data-reveal]').forEach(el => el.classList.add('visible'));
   }
 
   async function loadProducts(client) {
@@ -62,9 +62,12 @@
     const grid = document.querySelector('.product-grid');
     if (!grid || catalogObserver) return;
     catalogObserver = new MutationObserver(() => {
-      if (grid.querySelector('[data-bouquet]') || grid.querySelector('p[style*="grid-column"]')) loadProducts(client);
+      if (!grid.querySelector('[data-product-id]') && grid.querySelector('[data-bouquet]')) {
+        clearTimeout(catalogReloadTimer);
+        catalogReloadTimer = setTimeout(() => loadProducts(client), 0);
+      }
     });
-    catalogObserver.observe(grid, { childList: true });
+    catalogObserver.observe(grid, { childList: true, subtree: true });
   }
 
   function openOrderModal() { const modal = document.getElementById('order-modal'); if (!modal) return; modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); document.body.classList.add('modal-open'); }
