@@ -13,10 +13,32 @@
     if (window.matchMedia('(max-width: 760px)').matches && !document.querySelector('link[data-sm-mobile-css]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'assets/mobile.css?v=20260816-1';
+      link.href = 'assets/mobile.css?v=20260816-2';
       link.dataset.smMobileCss = 'true';
       document.head.appendChild(link);
     }
+  }
+
+  function setupMobileMenu() {
+    const toggle = document.querySelector('.menu-toggle');
+    const nav = document.getElementById('main-nav');
+    if (!toggle || !nav || toggle.dataset.menuReady === 'true') return;
+    toggle.dataset.menuReady = 'true';
+    const close = () => {
+      document.body.classList.remove('menu-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Открыть меню');
+    };
+    toggle.addEventListener('click', e => {
+      e.preventDefault();
+      const open = !document.body.classList.contains('menu-open');
+      document.body.classList.toggle('menu-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
+    });
+    nav.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 760) close(); });
   }
 
   function loadScript(src) {
@@ -167,6 +189,7 @@
 
   async function init() {
     loadMobileStyles();
+    setupMobileMenu();
     socialLinks();
     try {
       const db = await getClient();
