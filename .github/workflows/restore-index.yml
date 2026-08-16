@@ -18,7 +18,7 @@ jobs:
 
       - name: Restore last known good index
         run: |
-          git checkout bc9eaf0 -- index.html
+          git checkout 273dafa45dbabd7e8d89574760c6ce7290f001e9 -- index.html
           if git diff --quiet -- index.html; then
             echo "index.html is already restored"
             exit 0
