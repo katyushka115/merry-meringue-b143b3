@@ -4,6 +4,8 @@
   const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
   const TELEGRAM = 'https://t.me/smflowersmsk';
   const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
+  const STUDIO_ADDRESS = 'г. Москва, Ленинский проспект, 94А';
+  const MAP_URL = 'https://yandex.ru/maps/?text=' + encodeURIComponent(STUDIO_ADDRESS);
   let client = null;
   let selectedProduct = null;
 
@@ -13,10 +15,67 @@
     if (window.matchMedia('(max-width: 760px)').matches && !document.querySelector('link[data-sm-mobile-css]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'assets/mobile.css?v=20260816-2';
+      link.href = 'assets/mobile.css?v=20260816-3';
       link.dataset.smMobileCss = 'true';
       document.head.appendChild(link);
     }
+  }
+
+  function setupSafeSitePatches() {
+    if (document.documentElement.dataset.smSitePatches === 'true') return;
+    document.documentElement.dataset.smSitePatches = 'true';
+
+    const style = document.createElement('style');
+    style.dataset.smSitePatches = 'true';
+    style.textContent = `
+      .sm-studio-route-link { display:inline-flex; align-items:center; gap:7px; margin-top:10px; color:inherit; text-decoration:underline; text-underline-offset:4px; }
+      .sm-hero-note-fallback { position:absolute; z-index:3; right:24px; bottom:24px; max-width:300px; color:#fff; font-size:11px; line-height:1.35; letter-spacing:.04em; text-align:right; }
+      @media (max-width:760px) {
+        .hero-visual { position:relative; }
+        .hero-visual .hero-note, .hero-visual .sm-hero-note-fallback { display:block !important; right:18px; bottom:18px; max-width:72%; font-size:10px; line-height:1.35; text-align:right; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    document.querySelectorAll('*').forEach(el => {
+      if (el.children.length === 0 && (el.textContent || '').trim() === '@katyushka_115') el.textContent = '@smflowers.msk';
+      if (el.children.length === 0 && (el.textContent || '').trim() === '@katyushka_n15') el.textContent = '@smflowers.msk';
+    });
+
+    const hero = document.querySelector('.hero');
+    const heroVisual = document.querySelector('.hero-visual');
+    const existingNote = document.querySelector('.hero-note');
+    const noteText = 'Каждый букет существует в единственном экземпляре';
+    if (existingNote) {
+      existingNote.textContent = noteText;
+      existingNote.style.display = 'block';
+    } else if (heroVisual) {
+      const note = document.createElement('div');
+      note.className = 'sm-hero-note-fallback';
+      note.textContent = noteText;
+      heroVisual.appendChild(note);
+    } else if (hero) {
+      const note = document.createElement('div');
+      note.className = 'sm-hero-note-fallback';
+      note.textContent = noteText;
+      hero.appendChild(note);
+    }
+
+    const addressCandidates = Array.from(document.querySelectorAll('body *')).filter(el => {
+      if (el.children.length > 0) return false;
+      return (el.textContent || '').replace(/\s+/g, ' ').trim().includes('Ленинский проспект 94А') || (el.textContent || '').replace(/\s+/g, ' ').trim().includes('Ленинский проспект, 94А');
+    });
+    addressCandidates.forEach(el => {
+      const parent = el.parentElement;
+      if (!parent || parent.querySelector('.sm-studio-route-link')) return;
+      const link = document.createElement('a');
+      link.className = 'sm-studio-route-link';
+      link.href = MAP_URL;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = '📍 Построить маршрут →';
+      parent.appendChild(link);
+    });
   }
 
   function setupMobileMenu() {
@@ -190,6 +249,7 @@
   async function init() {
     loadMobileStyles();
     setupMobileMenu();
+    setupSafeSitePatches();
     socialLinks();
     try {
       const db = await getClient();
