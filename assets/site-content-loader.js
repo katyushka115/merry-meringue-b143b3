@@ -4,6 +4,14 @@
   const MAP = 'https://yandex.ru/maps/?text=' + encodeURIComponent('г. Москва, Ленинский проспект, 94А');
   const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
 
+  // Do not show the old hard-coded copy/images while editable content is loading.
+  const pendingStyle = document.createElement('style');
+  pendingStyle.id = 'sm-site-content-pending';
+  pendingStyle.textContent = `body.sm-content-pending > *:not(script){visibility:hidden!important}body.sm-content-pending::before{content:'SM Flowers';position:fixed;inset:0;display:grid;place-items:center;background:#f3efe7;color:#354032;font:500 22px/1 Georgia,serif;z-index:2147483647}body.sm-content-ready::before{display:none!important}`;
+  document.head.appendChild(pendingStyle);
+  document.documentElement.classList.add('sm-content-loader-active');
+  document.body.classList.add('sm-content-pending');
+
   const setText = (el, value) => { if (el) el.textContent = String(value ?? ''); };
   const setHref = (el, value) => { if (el && value) { el.href = value; el.target = '_blank'; el.rel = 'noopener noreferrer'; } };
 
@@ -30,26 +38,21 @@
     put(m,'hero_description','.hero-description p');
     put(m,'hero_primary_button','.hero-actions .button');
     put(m,'hero_secondary_button','.hero-actions .text-link');
-
     put(m,'about_eyebrow','.intro .eyebrow');
     put(m,'about_title','.intro .section-title');
     put(m,'about_text','.intro-text p');
     put(m,'about_link','.intro-text .text-link');
     put(m,'about_signature','.signature');
-
     put(m,'collections_eyebrow','.collections .section-heading .eyebrow');
     put(m,'collections_title','#collections-title');
     put(m,'collections_link','.collections .section-heading .text-link');
-
     put(m,'custom_eyebrow','.statement-copy .eyebrow');
     put(m,'custom_title','#custom-title');
     put(m,'custom_text','.statement-copy p:nth-of-type(2)');
     put(m,'custom_link','.statement-copy .text-link');
-
     put(m,'bouquets_eyebrow','.products .section-heading .eyebrow');
     put(m,'bouquets_title','#products-title');
     put(m,'bouquets_note','.products .section-heading > p');
-
     put(m,'values_eyebrow','.values-intro .eyebrow');
     put(m,'values_title','#values-title');
     put(m,'values_intro','.values-intro > p:last-child');
@@ -57,17 +60,14 @@
       put(m,`value_${n}_title`,`.value-item:nth-child(${n}) h3`);
       put(m,`value_${n}_text`,`.value-item:nth-child(${n}) p`);
     });
-
     put(m,'life_eyebrow','.gallery .section-heading .eyebrow');
     put(m,'life_instagram_handle','#gallery-title');
     put(m,'life_instagram_button','.gallery .section-heading .text-link');
-
     put(m,'final_eyebrow','.final-copy .eyebrow');
     put(m,'final_title','#final-title');
     put(m,'final_text','.final-copy > p:nth-of-type(2)');
     put(m,'final_call_button','.final-actions .button--light');
     put(m,'final_telegram_button','.final-actions .button--outline');
-
     put(m,'footer_brand','.footer-brand');
     put(m,'footer_nav_title','.footer-column:nth-child(2) h3');
     put(m,'footer_contacts_title','.footer-column:nth-child(3) h3');
@@ -76,21 +76,20 @@
     put(m,'footer_copyright','.footer-bottom span:first-child');
     put(m,'footer_tagline','.footer-bottom span:last-child');
 
-    const nav = {
-      nav_collections: '.nav-links a:nth-child(1)', nav_bouquets: '.nav-links a:nth-child(2)',
-      nav_custom: '.nav-links a:nth-child(3)', nav_about: '.nav-links a:nth-child(4)', nav_contacts: '.nav-links a:nth-child(5)'
-    };
+    const nav = {nav_collections:'.nav-links a:nth-child(1)',nav_bouquets:'.nav-links a:nth-child(2)',nav_custom:'.nav-links a:nth-child(3)',nav_about:'.nav-links a:nth-child(4)',nav_contacts:'.nav-links a:nth-child(5)'};
     Object.entries(nav).forEach(([k,s]) => put(m,k,s));
     put(m,'header_phone','.header-phone');
 
     const hours = document.querySelector('.footer-column:nth-child(4) p:nth-of-type(2)');
     if (hours && m.studio_hours?.is_visible) setText(hours, m.studio_hours.content);
-    const mapLabel = m.studio_map_label?.is_visible ? m.studio_map_label.content : 'Построить маршрут →';
     const address = document.querySelector('.footer-column:nth-child(4) p:first-of-type');
     if (address) {
       let link = address.parentElement.querySelector('.sm-studio-route-link');
       if (!link) { link = document.createElement('a'); link.className = 'sm-studio-route-link'; address.parentElement.appendChild(link); }
-      link.href = MAP; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = '📍 ' + mapLabel;
+      link.href = m.studio_map_url?.content || MAP;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = '📍 ' + (m.studio_map_label?.is_visible ? m.studio_map_label.content : 'Построить маршрут →');
+      link.setAttribute('aria-label', 'Открыть адрес студии на Яндекс.Картах');
     }
 
     const unique = m.life_unique_note?.is_visible ? m.life_unique_note.content : '';
@@ -101,22 +100,16 @@
       note.textContent = unique;
     } else if (note) note.remove();
 
-    // «Авторский букет» и «Розовое облако» больше не показываем в «Жизни студии».
     document.querySelectorAll('.sm-life-caption').forEach(el => el.remove());
-
     const instagram = m.life_instagram_url?.content || INSTAGRAM;
     document.querySelectorAll('a').forEach(a => {
       const href = (a.getAttribute('href') || '').toLowerCase();
       const label = (a.textContent || '').toLowerCase();
       if (href.includes('instagram.com') || label.includes('instagram')) setHref(a, instagram);
     });
-
-    // Фраза про единственный экземпляр принадлежит только «Жизни студии».
     document.querySelectorAll('.hero-note,.sm-hero-note-fallback').forEach(el => el.remove());
   }
 
-  // Supabase Storage умеет отдавать уменьшенные изображения через Image Transformations.
-  // Это заметно уменьшает время загрузки больших живых фотографий на компьютере и телефоне.
   function optimizedImageUrl(raw, width) {
     if (!raw) return raw;
     try {
@@ -134,25 +127,21 @@
   function prepareImage(img, rawUrl, priority = false) {
     if (!img || !rawUrl) return;
     const width = Math.min(Math.max(Math.round((window.innerWidth || 1200) * (window.devicePixelRatio || 1)), 480), 1800);
-    const src = optimizedImageUrl(rawUrl, width);
     img.loading = priority ? 'eager' : 'lazy';
     img.decoding = 'async';
     if (priority) img.fetchPriority = 'high';
-    img.src = src;
+    img.src = optimizedImageUrl(rawUrl, width);
   }
 
   function applyMedia(rows) {
     const by = Object.fromEntries(rows.map(r => [r.slot_key, r]));
     prepareImage(document.querySelector('.hero-visual img'), by.hero?.image_url, true);
-
     const cards = document.querySelectorAll('.collection-card');
     ['collection_1','collection_2','collection_3','collection_4'].forEach((k,i) => {
       if (cards[i] && by[k]?.image_url) prepareImage(cards[i].querySelector('img'), by[k].image_url);
     });
-
     if (by.custom_art?.image_url) prepareImage(document.querySelector('.statement-art img'), by.custom_art.image_url);
     if (by.final_art?.image_url) prepareImage(document.querySelector('.final-art img'), by.final_art.image_url);
-
     const gallery = document.querySelectorAll('.gallery-item img');
     const keys = ['life_photo_1','life_photo_2','life_photo_3','life_photo_4'];
     const fallbackKeys = ['gallery_photo_1','gallery_photo_2','gallery_photo_3','gallery_photo_4'];
@@ -175,14 +164,26 @@
   async function run() {
     injectStyle();
     const db=client();
-    if (!db) return;
-    const [c,media]=await Promise.all([
-      db.from('site_content').select('content_key,content,section,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order'),
-      db.from('site_media').select('section,slot_key,image_url,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order')
-    ]);
-    if (!c.error) applyContent(c.data || []);
-    if (!media.error) applyMedia(media.data || []);
+    if (!db) { reveal(); return; }
+    try {
+      const [c,media]=await Promise.all([
+        db.from('site_content').select('content_key,content,section,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order'),
+        db.from('site_media').select('section,slot_key,image_url,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order')
+      ]);
+      if (!c.error) applyContent(c.data || []);
+      if (!media.error) applyMedia(media.data || []);
+    } catch (_) {} finally { reveal(); }
   }
+
+  let revealed = false;
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    document.body.classList.remove('sm-content-pending');
+    document.body.classList.add('sm-content-ready');
+  }
+  // Never leave a blank page if a network request fails.
+  setTimeout(reveal, 5000);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(run, 0), {once:true});
   else setTimeout(run, 0);
