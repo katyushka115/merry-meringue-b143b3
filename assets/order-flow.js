@@ -9,6 +9,16 @@
 
   const esc = v => String(v ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
 
+  function loadMobileStyles() {
+    if (window.matchMedia('(max-width: 760px)').matches && !document.querySelector('link[data-sm-mobile-css]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'assets/mobile.css?v=20260816-1';
+      link.dataset.smMobileCss = 'true';
+      document.head.appendChild(link);
+    }
+  }
+
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-sm-supabase="${src}"]`);
@@ -156,6 +166,7 @@
   }
 
   async function init() {
+    loadMobileStyles();
     socialLinks();
     try {
       const db = await getClient();
