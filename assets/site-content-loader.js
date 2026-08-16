@@ -4,9 +4,7 @@
   const MAP = 'https://yandex.ru/maps/?text=' + encodeURIComponent('г. Москва, Ленинский проспект, 94А');
   const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
 
-  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-  const text = (v) => String(v ?? '');
-  const setText = (el, value) => { if (el) el.textContent = value; };
+  const setText = (el, value) => { if (el) el.textContent = String(value ?? ''); };
   const setHref = (el, value) => { if (el && value) { el.href = value; el.target = '_blank'; el.rel = 'noopener noreferrer'; } };
 
   function client() {
@@ -103,14 +101,8 @@
       note.textContent = unique;
     } else if (note) note.remove();
 
-    const captions = [m.life_author_caption, m.life_cloud_caption];
-    document.querySelectorAll('.gallery-item').forEach((item,i) => {
-      if (captions[i]?.is_visible) {
-        let cap = item.querySelector('.sm-life-caption');
-        if (!cap) { cap = document.createElement('span'); cap.className='sm-life-caption'; item.appendChild(cap); }
-        cap.textContent = captions[i].content;
-      }
-    });
+    // «Авторский букет» и «Розовое облако» больше не показываем в «Жизни студии».
+    document.querySelectorAll('.sm-life-caption').forEach(el => el.remove());
 
     const instagram = m.life_instagram_url?.content || INSTAGRAM;
     document.querySelectorAll('a').forEach(a => {
@@ -119,30 +111,64 @@
       if (href.includes('instagram.com') || label.includes('instagram')) setHref(a, instagram);
     });
 
-    // The phrase belongs to «Жизнь студии», never to the hero image.
+    // Фраза про единственный экземпляр принадлежит только «Жизни студии».
     document.querySelectorAll('.hero-note,.sm-hero-note-fallback').forEach(el => el.remove());
+  }
+
+  // Supabase Storage умеет отдавать уменьшенные изображения через Image Transformations.
+  // Это заметно уменьшает время загрузки больших живых фотографий на компьютере и телефоне.
+  function optimizedImageUrl(raw, width) {
+    if (!raw) return raw;
+    try {
+      const u = new URL(raw);
+      const marker = '/storage/v1/object/public/';
+      if (!u.pathname.includes(marker)) return raw;
+      u.pathname = u.pathname.replace(marker, '/storage/v1/render/image/public/');
+      u.searchParams.set('width', String(width));
+      u.searchParams.set('quality', '78');
+      u.searchParams.set('resize', 'contain');
+      return u.toString();
+    } catch (_) { return raw; }
+  }
+
+  function prepareImage(img, rawUrl, priority = false) {
+    if (!img || !rawUrl) return;
+    const width = Math.min(Math.max(Math.round((window.innerWidth || 1200) * (window.devicePixelRatio || 1)), 480), 1800);
+    const src = optimizedImageUrl(rawUrl, width);
+    img.loading = priority ? 'eager' : 'lazy';
+    img.decoding = 'async';
+    if (priority) img.fetchPriority = 'high';
+    img.src = src;
   }
 
   function applyMedia(rows) {
     const by = Object.fromEntries(rows.map(r => [r.slot_key, r]));
-    const hero = document.querySelector('.hero-visual img');
-    if (by.hero?.image_url) hero.src = by.hero.image_url;
+    prepareImage(document.querySelector('.hero-visual img'), by.hero?.image_url, true);
+
     const cards = document.querySelectorAll('.collection-card');
-    ['collection_1','collection_2','collection_3','collection_4'].forEach((k,i) => { if (cards[i] && by[k]?.image_url) cards[i].querySelector('img').src = by[k].image_url; });
-    if (by.custom_art?.image_url) document.querySelector('.statement-art img').src = by.custom_art.image_url;
-    if (by.final_art?.image_url) document.querySelector('.final-art img').src = by.final_art.image_url;
+    ['collection_1','collection_2','collection_3','collection_4'].forEach((k,i) => {
+      if (cards[i] && by[k]?.image_url) prepareImage(cards[i].querySelector('img'), by[k].image_url);
+    });
+
+    if (by.custom_art?.image_url) prepareImage(document.querySelector('.statement-art img'), by.custom_art.image_url);
+    if (by.final_art?.image_url) prepareImage(document.querySelector('.final-art img'), by.final_art.image_url);
+
     const gallery = document.querySelectorAll('.gallery-item img');
-    ['life_photo_1','life_photo_2','life_photo_3','life_photo_4'].forEach((k,i) => { if (gallery[i] && by[k]?.image_url) gallery[i].src = by[k].image_url; });
-    ['gallery_photo_1','gallery_photo_2','gallery_photo_3','gallery_photo_4'].forEach((k,i) => { if (gallery[i] && by[k]?.image_url) gallery[i].src = by[k].image_url; });
+    const keys = ['life_photo_1','life_photo_2','life_photo_3','life_photo_4'];
+    const fallbackKeys = ['gallery_photo_1','gallery_photo_2','gallery_photo_3','gallery_photo_4'];
+    keys.forEach((k,i) => {
+      const row = by[k]?.image_url ? by[k] : by[fallbackKeys[i]];
+      if (gallery[i] && row?.image_url) prepareImage(gallery[i], row.image_url);
+    });
   }
 
   function injectStyle() {
     if (document.getElementById('sm-site-content-style')) return;
     const s=document.createElement('style'); s.id='sm-site-content-style'; s.textContent=`
       .sm-life-unique-note{margin:18px 0 0;max-width:620px;font-family:var(--serif);font-size:20px;font-style:italic;line-height:1.25;color:rgba(31,38,30,.72)}
-      .sm-life-caption{position:absolute;left:18px;bottom:18px;z-index:3;padding:7px 10px;background:rgba(24,31,23,.65);color:#fff;font-family:var(--serif);font-size:18px;line-height:1.1}
       .sm-studio-route-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:rgba(255,255,255,.82);text-decoration:underline;text-underline-offset:4px}
-      @media(max-width:760px){.sm-life-unique-note{font-size:18px;margin:14px 20px 0}.sm-life-caption{font-size:16px;left:12px;bottom:12px}.sm-studio-route-link{margin-top:9px}}
+      .gallery-item img,.collection-card img,.hero-visual img,.statement-art img,.final-art img{content-visibility:auto}
+      @media(max-width:760px){.sm-life-unique-note{font-size:18px;margin:14px 20px 0}.sm-studio-route-link{margin-top:9px}}
     `; document.head.appendChild(s);
   }
 
