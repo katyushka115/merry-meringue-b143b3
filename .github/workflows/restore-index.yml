@@ -1,0 +1,30 @@
+name: Restore site index
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore last known good index
+        run: |
+          git checkout bc9eaf0 -- index.html
+          if git diff --quiet -- index.html; then
+            echo "index.html is already restored"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Restore working site index"
+          git push
