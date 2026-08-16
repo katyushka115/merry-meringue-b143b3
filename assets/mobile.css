@@ -4,6 +4,11 @@
   :root { --mobile-gutter: 18px; }
   html { overflow-x: hidden; }
   body { min-width: 0; overflow-x: hidden; font-size: 14px; }
+
+  /* Mobile must never inherit desktop reveal-hidden state. */
+  [data-reveal],
+  [data-reveal].visible { opacity: 1 !important; transform: none !important; }
+
   .header-inner,
   .intro,
   .section-heading,
@@ -18,21 +23,20 @@
     min-height: 72px;
     border-bottom-color: rgba(255,255,255,.28);
   }
+  .brand { position: relative; z-index: 22; }
   .brand strong { font-size: 25px; }
   .brand span { margin-top: 4px; font-size: 7px; letter-spacing: .22em; }
   .nav-links,
   .header-phone { display: none; }
-  .menu-toggle { display: block; }
+  .menu-toggle { display: block; position: relative; z-index: 22; }
   body.menu-open .menu-toggle span:first-child { transform: translateY(7px) rotate(45deg); }
   body.menu-open .menu-toggle span:nth-child(2) { opacity: 0; }
   body.menu-open .menu-toggle span:last-child { transform: translateY(-7px) rotate(-45deg); }
 
-  /* Mobile menu: works with common nav wrappers without changing desktop markup. */
-  .site-header.menu-open .nav-links,
   body.menu-open .nav-links {
     position: fixed;
     inset: 72px 0 0;
-    z-index: 30;
+    z-index: 21;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -46,16 +50,13 @@
     align-items: center;
     min-height: 58px;
     border-bottom: 1px solid rgba(255,255,255,.18);
+    color: #fff;
     font-size: 11px;
     letter-spacing: .16em;
   }
 
   /* Hero */
-  .hero {
-    display: flex;
-    flex-direction: column;
-    min-height: auto;
-  }
+  .hero { display: flex; flex-direction: column; min-height: auto; }
   .hero-copy {
     min-height: 610px;
     padding: 125px var(--mobile-gutter) 42px;
@@ -67,39 +68,35 @@
     line-height: .88;
   }
   .hero-copy .display em { margin-left: .35em; }
-  .hero-description {
-    grid-template-columns: 38px 1fr;
-    gap: 14px;
-    max-width: 100%;
-    margin-top: 30px;
-  }
+  .hero-description { grid-template-columns: 38px 1fr; gap: 14px; max-width: 100%; margin-top: 30px; }
   .hero-description p { font-size: 13px; line-height: 1.55; }
   .hero-actions { flex-wrap: wrap; gap: 14px; margin-top: 24px; }
   .hero-actions .button { width: 100%; }
   .hero-actions .text-link { margin-left: 2px; }
   .hero-visual { min-height: 58vw; height: 72vw; max-height: 520px; }
   .hero-visual img { transform: scale(1.02); }
-  .hero-note { right: 14px; bottom: 14px; max-width: 175px; padding: 12px 14px; font-size: 16px; }
+  /* The hero photo is a standalone image on mobile; do not place the desktop note over it. */
+  .hero-note { display: none; }
   .scroll-mark { display: none; }
 
   /* Intro */
-  .intro {
-    display: block;
-    padding: 72px 0 82px;
-  }
-  .intro .section-title { font-size: clamp(39px, 12vw, 56px); }
-  .intro-text { margin-top: 34px; padding-bottom: 0; }
-  .intro-text p { margin-bottom: 22px; }
-  .signature { margin-top: 28px; font-size: 23px; }
+  .intro { display: block; padding: 72px 0 82px; }
+  .intro .eyebrow { display: block; }
+  .intro .section-title { display: block; font-size: clamp(39px, 12vw, 56px); }
+  .intro-text { display: block; margin-top: 34px; padding-bottom: 0; }
+  .intro-text p { display: block; margin-bottom: 22px; }
+  .signature { display: block; margin-top: 28px; font-size: 23px; }
 
   /* Collections */
   .collections { padding-bottom: 82px; }
   .section-heading {
+    display: block;
     align-items: flex-start;
-    flex-direction: column;
-    gap: 18px;
     margin-bottom: 28px;
   }
+  .section-heading .eyebrow,
+  .section-heading .section-title { display: block; }
+  .section-heading .text-link { display: inline-flex; margin-top: 18px; }
   .section-title { font-size: clamp(39px, 12vw, 56px); }
   .collection-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
   .collection-card,
@@ -109,6 +106,7 @@
     max-height: 520px;
     margin-top: 0;
   }
+  .collection-card img { object-position: center; }
   .collection-meta { right: 18px; bottom: 18px; left: 18px; }
   .collection-meta h3 { font-size: 34px; }
 
