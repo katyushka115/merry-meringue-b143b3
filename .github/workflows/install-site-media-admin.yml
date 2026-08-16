@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'admin/site-editor/site-media-admin.js'
+      - '.github/workflows/install-site-media-admin.yml'
 
 permissions:
   contents: write
@@ -25,12 +26,27 @@ jobs:
               if marker not in s:
                   raise SystemExit('admin/index.html has no closing body tag')
               s = s.replace(marker, tag + marker, 1)
-              p.write_text(s, encoding='utf-8')
+
+          # Keep the old text editor implementation and its database records intact,
+          # but remove only its legacy tab/section from the visible admin UI.
+          hide = '''<script>(function(){
+            function hideLegacyTextEditor(){
+              var tab=document.querySelector('.tabs [data-tab="texts"]');
+              var section=document.getElementById('texts-tab');
+              if(tab) tab.style.display='none';
+              if(section) section.style.display='none';
+            }
+            if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',hideLegacyTextEditor);
+            else hideLegacyTextEditor();
+          })();</script>'''
+          if 'hideLegacyTextEditor' not in s:
+              s = s.replace('</body>', hide + '</body>', 1)
+          p.write_text(s, encoding='utf-8')
           PY
       - name: Commit admin integration
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add admin/index.html
-          git diff --cached --quiet || git commit -m 'Add site media controls to admin'
+          git diff --cached --quiet || git commit -m 'Hide legacy text editor tab'
           git push
