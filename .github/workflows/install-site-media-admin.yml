@@ -1,0 +1,36 @@
+name: Install site media admin
+
+on:
+  push:
+    paths:
+      - 'admin/site-editor/site-media-admin.js'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add site media editor to admin
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('admin/index.html')
+          s = p.read_text(encoding='utf-8')
+          tag = '<script src="site-editor/site-media-admin.js"></script>'
+          if tag not in s:
+              marker = '</body>'
+              if marker not in s:
+                  raise SystemExit('admin/index.html has no closing body tag')
+              s = s.replace(marker, tag + marker, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit admin integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin/index.html
+          git diff --cached --quiet || git commit -m 'Add site media controls to admin'
+          git push
