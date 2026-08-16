@@ -46,6 +46,44 @@
     });
   }
 
+  function applyImage(img, url, fallback) {
+    if (!img) return;
+    if (url) {
+      img.src = url;
+      img.onerror = () => { img.onerror = null; if (fallback) img.src = fallback; };
+    }
+  }
+
+  async function loadAppearance() {
+    const db = await getClient();
+    const [settingsResult, categoriesResult] = await Promise.all([
+      db.from('store_settings').select('hero_image_url,telegram_url,instagram_url').limit(1).maybeSingle(),
+      db.from('categories').select('id,name,image_url,sort_order,is_active').eq('is_active', true).order('sort_order', {ascending:true}).order('id', {ascending:true})
+    ]);
+
+    if (!settingsResult.error && settingsResult.data) {
+      const settings = settingsResult.data;
+      socialLinks(settings);
+      const hero = document.querySelector('.hero-visual img');
+      applyImage(hero, settings.hero_image_url, 'assets/bouquet-6.svg');
+    }
+
+    if (!categoriesResult.error && Array.isArray(categoriesResult.data) && categoriesResult.data.length) {
+      const cards = Array.from(document.querySelectorAll('.collection-card'));
+      categoriesResult.data.slice(0, cards.length).forEach((category, index) => {
+        const card = cards[index];
+        const img = card.querySelector('img');
+        const title = card.querySelector('.collection-meta h3');
+        const meta = card.querySelector('.collection-meta span');
+        applyImage(img, category.image_url, `assets/bouquet-${[1,2,5][index] || 1}.svg`);
+        if (title) title.textContent = category.name || `Коллекция ${index + 1}`;
+        if (img) img.alt = `${category.name || 'Коллекция'} — SM Flowers`;
+        if (meta) meta.textContent = `${String(index + 1).padStart(2,'0')} / коллекция`;
+        if (card) card.dataset.categoryId = category.id;
+      });
+    }
+  }
+
   function renderProducts(products) {
     const grid = document.querySelector('.product-grid');
     if (!grid) return;
@@ -121,7 +159,8 @@
     socialLinks();
     try {
       const db = await getClient();
-      try { const {data} = await db.from('store_settings').select('store_name,phone,telegram_url,instagram_url').limit(1).maybeSingle(); if (data) socialLinks(data); } catch (_) {}
+      try { const {data} = await db.from('store_settings').select('store_name,phone,telegram_url,instagram_url,hero_image_url').limit(1).maybeSingle(); if (data) socialLinks(data); } catch (_) {}
+      try { await loadAppearance(); } catch (appearanceError) { console.error('SM Flowers appearance error:', appearanceError); }
       await loadCatalog();
     } catch (err) {
       console.error('SM Flowers startup error:', err);
