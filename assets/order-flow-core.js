@@ -29,12 +29,9 @@
     style.dataset.smSitePatches = 'true';
     style.textContent = `
       .sm-studio-route-link { display:inline-flex; align-items:center; gap:7px; margin-top:10px; color:inherit; text-decoration:underline; text-underline-offset:4px; }
-      .sm-hero-note-fallback { position:absolute; z-index:3; right:24px; bottom:24px; max-width:300px; color:#fff; font-size:11px; line-height:1.35; letter-spacing:.04em; text-align:right; }
+      .sm-hero-note-fallback { display:none !important; }
+      .hero-visual .hero-note { display:none !important; }
       .sm-image-pending { visibility:hidden !important; }
-      @media (max-width:760px) {
-        .hero-visual { position:relative; }
-        .hero-visual .hero-note, .hero-visual .sm-hero-note-fallback { display:block !important; right:18px; bottom:18px; max-width:72%; font-size:10px; line-height:1.35; text-align:right; }
-      }
     `;
     document.head.appendChild(style);
 
@@ -43,24 +40,7 @@
       if (el.children.length === 0 && (el.textContent || '').trim() === '@katyushka_n15') el.textContent = '@smflowers.msk';
     });
 
-    const hero = document.querySelector('.hero');
-    const heroVisual = document.querySelector('.hero-visual');
-    const existingNote = document.querySelector('.hero-note');
-    const noteText = 'Каждый букет существует в единственном экземпляре';
-    if (existingNote) {
-      existingNote.textContent = noteText;
-      existingNote.style.display = 'block';
-    } else if (heroVisual) {
-      const note = document.createElement('div');
-      note.className = 'sm-hero-note-fallback';
-      note.textContent = noteText;
-      heroVisual.appendChild(note);
-    } else if (hero) {
-      const note = document.createElement('div');
-      note.className = 'sm-hero-note-fallback';
-      note.textContent = noteText;
-      hero.appendChild(note);
-    }
+    document.querySelectorAll('.hero-note, .sm-hero-note-fallback').forEach(el => el.remove());
 
     const addressCandidates = Array.from(document.querySelectorAll('body *')).filter(el => {
       if (el.children.length > 0) return false;
@@ -99,16 +79,6 @@
     nav.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     window.addEventListener('resize', () => { if (window.innerWidth > 760) close(); });
-  }
-
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[data-sm-supabase="${src}"]`);
-      if (existing) { existing.addEventListener('load', resolve, {once:true}); existing.addEventListener('error', reject, {once:true}); return; }
-      const s = document.createElement('script');
-      s.type = 'module'; s.src = src; s.dataset.smSupabase = src;
-      s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
-    });
   }
 
   async function getClient() {
