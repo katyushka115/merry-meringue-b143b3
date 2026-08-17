@@ -6,14 +6,10 @@
     collection3: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/collections/ddf86b0f-28be-47cd-9df9-b4fb27650ba4.jpeg',
     custom: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/36fe864b-da66-4022-bcda-d81b29c7c83c.jpeg',
     life1: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/aa61840b-6cdc-4995-bc66-254fd06b79c6.jpeg',
-    life2: 'https://avlozhwwvjqiypififoxox.supabase.co/storage/v1/object/public/bouquets/site-media/43eded19-9452-4166-94d5-fd30df355827.jpeg',
+    life2: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/43eded19-9452-4166-94d5-fd30df355827.jpeg',
     life3: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/8477d15f-8019-4764-99e9-989a8e45bb6e.jpeg',
     life4: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/2e58be79-a7b9-4702-8467-3891417abe42.jpeg',
-    final: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg',
-    product1: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/e496cdb9-a106-4308-8572-f6ca621416a6.jpeg',
-    product2: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/products/d1f21237-9960-451b-be4f-e605e369dc12.jpeg',
-    product3: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/products/1f7ad4bc-0680-4a98-a55b-0db7740e0505.jpeg',
-    product4: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/e4c020f0-bfab-4a1d-86a8-32024b389918.jpeg'
+    final: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg'
   };
 
   const TEXT = {
@@ -70,7 +66,7 @@
   const MAP = 'https://yandex.ru/maps/?text=' + encodeURIComponent('г. Москва, Ленинский проспект, 94А');
 
   const style = document.createElement('style');
-  style.textContent = '.sm-image-pending{visibility:visible!important;opacity:1!important}.hero-visual .hero-note,.sm-hero-note-fallback,.sm-life-unique-note{display:none!important}';
+  style.textContent = '.sm-image-pending{visibility:visible!important;opacity:1!important}.hero-visual .hero-note,.sm-hero-note-fallback,.sm-life-unique-note{display:none!important}.sm-studio-route-link{display:inline-flex;align-items:center;gap:7px;margin-top:10px;color:inherit;text-decoration:underline;text-underline-offset:4px}';
   document.head.appendChild(style);
 
   function paintText() {
@@ -93,24 +89,41 @@
     });
   }
 
-  function preload(src, priority = false) {
-    const link = document.createElement('link'); link.rel = 'preload'; link.as = 'image'; link.href = src;
+  function optimized(src, width) {
+    try {
+      const u = new URL(src);
+      u.pathname = u.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+      u.searchParams.set('width', String(width));
+      u.searchParams.set('quality', '78');
+      u.searchParams.set('resize', 'cover');
+      return u.toString();
+    } catch (_) { return src; }
+  }
+
+  function preload(src, width, priority = false) {
+    const link = document.createElement('link'); link.rel = 'preload'; link.as = 'image'; link.href = optimized(src, width);
     if (priority) link.fetchPriority = 'high'; document.head.appendChild(link);
   }
 
+  function setImage(img, src, width, priority = false) {
+    if (!img || !src) return;
+    const url = optimized(src, width);
+    preload(src, width, priority);
+    img.src = url; img.loading = priority ? 'eager' : 'lazy'; img.decoding = 'async';
+    if (priority) img.fetchPriority = 'high';
+  }
+
   function paintImages() {
-    [IMG.hero, IMG.collection1, IMG.collection2, IMG.collection3, IMG.custom, IMG.life1, IMG.life2, IMG.life3, IMG.life4, IMG.final, IMG.product1, IMG.product2, IMG.product3, IMG.product4].forEach((src, i) => preload(src, i === 0));
-    const hero = document.querySelector('.hero-visual img');
-    if (hero) { hero.src = IMG.hero; hero.loading = 'eager'; hero.fetchPriority = 'high'; hero.decoding = 'async'; }
-    document.querySelectorAll('.collection-card img').forEach((img, i) => { const src=[IMG.collection1,IMG.collection2,IMG.collection3][i]; if(src){img.src=src;img.loading='eager';img.decoding='async';} });
-    const custom = document.querySelector('.statement-art img'); if (custom) { custom.src=IMG.custom; custom.loading='eager'; custom.decoding='async'; }
-    document.querySelectorAll('.gallery-item img').forEach((img,i)=>{const src=[IMG.life1,IMG.life2,IMG.life3,IMG.life4][i];if(src){img.src=src;img.loading='eager';img.decoding='async';}});
-    const final = document.querySelector('.final-art img'); if (final) { final.src=IMG.final; final.loading='eager'; final.decoding='async'; }
+    setImage(document.querySelector('.hero-visual img'), IMG.hero, 1500, true);
+    document.querySelectorAll('.collection-card img').forEach((img, i) => setImage(img, [IMG.collection1, IMG.collection2, IMG.collection3][i], 1000, i === 0));
+    setImage(document.querySelector('.statement-art img'), IMG.custom, 1000);
+    document.querySelectorAll('.gallery-item img').forEach((img, i) => setImage(img, [IMG.life1, IMG.life2, IMG.life3, IMG.life4][i], 900));
+    setImage(document.querySelector('.final-art img'), IMG.final, 1100);
   }
 
   paintText();
   paintImages();
 
   const load = src => new Promise((resolve, reject) => { const s=document.createElement('script'); s.src=src; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); });
-  load('assets/order-flow-core.js?v=20260817-fast2').then(() => load('assets/studio-contact-order.js?v=20260817-fast2')).catch(err => console.error('SM Flowers loader error:', err));
+  load('assets/order-flow-core.js?v=20260817-fast3').then(() => load('assets/studio-contact-order.js?v=20260817-fast3')).catch(err => console.error('SM Flowers loader error:', err));
 })();
