@@ -43,10 +43,37 @@ jobs:
               s = s.replace('</body>', hide + '</body>', 1)
           p.write_text(s, encoding='utf-8')
           PY
-      - name: Commit admin integration
+      - name: Optimize main hero image loading
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          preload = '<link rel="preload" as="image" href="assets/bouquet-6.svg" fetchpriority="high">'
+          if preload not in s:
+              marker = '<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>'
+              if marker not in s:
+                  raise SystemExit('font preconnect marker not found')
+              s = s.replace(marker, marker + '\n  ' + preload, 1)
+
+          old_css = '.hero-visual img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);animation:settle 1.4s cubic-bezier(.2,.7,.2,1) both}'
+          new_css = '.hero-visual img{width:100%;height:100%;object-fit:cover;transform:scale(1.04)}'
+          if old_css in s:
+              s = s.replace(old_css, new_css, 1)
+          s = s.replace('@keyframes settle{from{opacity:0;transform:scale(1.12)}to{opacity:1;transform:scale(1.04)}}\n', '', 1)
+
+          old_img = '<img src="assets/bouquet-6.svg" alt="Авторский букет SM Flowers">'
+          new_img = '<img src="assets/bouquet-6.svg" alt="Авторский букет SM Flowers" fetchpriority="high" loading="eager" decoding="async">'
+          if old_img in s:
+              s = s.replace(old_img, new_img, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit integration and performance changes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin/index.html
-          git diff --cached --quiet || git commit -m 'Hide legacy text editor tab'
+          git add admin/index.html index.html
+          git diff --cached --quiet || git commit -m 'Load hero image immediately'
           git push
