@@ -30,19 +30,20 @@
       // Replace the SVG wrapper with the actual JPEG request.
       img.loading = 'eager';
       img.decoding = 'async';
-      img.fetchPriority = 'high';
+      img.fetchPriority = key === 'assets/bouquet-6.svg' ? 'high' : 'auto';
       img.src = direct;
     });
 
-    // Explicitly warm the browser cache for the first-screen image set.
-    Object.values(imageSources).forEach((src) => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'image';
-      link.href = src;
-      link.fetchPriority = 'high';
-      document.head.appendChild(link);
-    });
+    // Warm only the hero image: it is the only image that must be visible
+    // immediately on the first screen. Other images can load in parallel
+    // without competing with it for the highest network priority.
+    const hero = imageSources['assets/bouquet-6.svg'];
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = hero;
+    link.fetchPriority = 'high';
+    document.head.appendChild(link);
   };
 
   startImages();
