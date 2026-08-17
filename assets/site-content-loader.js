@@ -2,10 +2,8 @@
   const URL = 'https://avlozhwwvjqiypifoxox.supabase.co';
   const KEY = 'sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
   const MAP = 'https://yandex.ru/maps/?text=' + encodeURIComponent('г. Москва, Ленинский проспект, 94А');
-  const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
+  const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtua1mNWRi&utm_source=qr';
 
-  // Never hide the page while Supabase is loading. Static HTML is the first
-  // paint; remote content is applied in the background without a blank screen.
   const pendingStyle = document.createElement('style');
   pendingStyle.id = 'sm-site-content-pending';
   pendingStyle.textContent = `
@@ -16,8 +14,6 @@
   `;
   document.head.appendChild(pendingStyle);
   document.documentElement.classList.add('sm-content-loading');
-  // Compatibility with an older cached order-flow.js: release its legacy
-  // full-page visibility lock immediately as well.
   document.body.classList.add('sm-content-ready');
 
   const setText=(el,value)=>{if(el)el.textContent=String(value??'');};
@@ -29,7 +25,6 @@
     const nav={nav_collections:'.nav-links a:nth-child(1)',nav_bouquets:'.nav-links a:nth-child(2)',nav_custom:'.nav-links a:nth-child(3)',nav_about:'.nav-links a:nth-child(4)',nav_contacts:'.nav-links a:nth-child(5)'};Object.entries(nav).forEach(([k,s])=>put(m,k,s));put(m,'header_phone','.header-phone');
     const hours=document.querySelector('.footer-column:nth-child(4) p:nth-of-type(2)');if(hours&&m.studio_hours?.is_visible)setText(hours,m.studio_hours.content);const address=document.querySelector('.footer-column:nth-child(4) p:first-of-type');if(address){let link=address.parentElement.querySelector('.sm-studio-route-link');if(!link){link=document.createElement('a');link.className='sm-studio-route-link';address.parentElement.appendChild(link);}link.href=m.studio_map_url?.content||MAP;link.target='_blank';link.rel='noopener noreferrer';link.textContent='📍 '+(m.studio_map_label?.is_visible?m.studio_map_label.content:'Построить маршрут →');link.setAttribute('aria-label','Открыть адрес студии на Яндекс.Картах');}
     const unique=m.life_unique_note?.is_visible?m.life_unique_note.content:'';let note=document.querySelector('.sm-life-unique-note');const galleryHead=document.querySelector('.gallery .section-heading');if(unique&&galleryHead){if(!note){note=document.createElement('p');note.className='sm-life-unique-note';galleryHead.appendChild(note);}note.textContent=unique;}else if(note)note.remove();document.querySelectorAll('.sm-life-caption').forEach(el=>el.remove());const instagram=m.life_instagram_url?.content||INSTAGRAM;document.querySelectorAll('a').forEach(a=>{const href=(a.getAttribute('href')||'').toLowerCase(),label=(a.textContent||'').toLowerCase();if(href.includes('instagram.com')||label.includes('instagram'))setHref(a,instagram);});
-    // The static hero note is intentional and must remain visible.
   }
   function optimizedImageUrl(raw,width){if(!raw)return raw;try{const u=new URL(raw),marker='/storage/v1/object/public/';if(!u.pathname.includes(marker))return raw;u.pathname=u.pathname.replace(marker,'/storage/v1/render/image/public/');u.searchParams.set('width',String(width));u.searchParams.set('quality','78');u.searchParams.set('resize','contain');return u.toString();}catch(_){return raw;}}
   function prepareImage(img,rawUrl,priority=false){
@@ -48,14 +43,14 @@
   }
   async function applyMedia(rows){const by=Object.fromEntries(rows.map(r=>[r.slot_key,r]));const jobs=[];
     jobs.push(prepareImage(document.querySelector('.hero-visual img'),by.hero?.image_url,true));
-    const cards=document.querySelectorAll('.collection-card');['collection_1','collection_2','collection_3','collection_4'].forEach((k,i)=>{if(cards[i])jobs.push(prepareImage(cards[i].querySelector('img'),by[k]?.image_url));});
+    const cards=document.querySelectorAll('.collection-card');['collection_1','collection_2','collection_3','collection_4'].forEach((k,i)=>{const row=by[k];if(cards[i]){const title=cards[i].querySelector('.collection-meta h3');if(title&&row?.label)setText(title,String(row.label).replace(/^Коллекция:\s*/i,''));const caption=cards[i].querySelector('.collection-meta span');if(caption&&row?.label)caption.textContent=`${String(i+1).padStart(2,'0')} / коллекция`;const img=cards[i].querySelector('img');if(img&&row?.alt_text)img.alt=row.alt_text;jobs.push(prepareImage(img,row?.image_url));}});
     jobs.push(prepareImage(document.querySelector('.statement-art img'),by.custom_art?.image_url));
     const gallery=document.querySelectorAll('.gallery-item img');const keys=['life_photo_1','life_photo_2','life_photo_3','life_photo_4','gallery_photo_1','gallery_photo_2','gallery_photo_3','gallery_photo_4'];keys.forEach((k,i)=>{const row=by[k];if(gallery[i])jobs.push(prepareImage(gallery[i],row?.image_url));});
     jobs.push(prepareImage(document.querySelector('.final-art img'),by.final_art?.image_url));
     await Promise.all(jobs);
   }
   function injectStyle(){if(document.getElementById('sm-site-content-style'))return;const s=document.createElement('style');s.id='sm-site-content-style';s.textContent=`.sm-life-unique-note{margin:18px 0 0;max-width:620px;font-family:var(--serif);font-size:20px;font-style:italic;line-height:1.25;color:rgba(31,38,30,.72)}.sm-studio-route-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:rgba(255,255,255,.82);text-decoration:underline;text-underline-offset:4px}.gallery-item img,.collection-card img,.hero-visual img,.statement-art img,.final-art img{content-visibility:auto}@media(max-width:760px){.sm-life-unique-note{font-size:18px;margin:14px 20px 0}.sm-studio-route-link{margin-top:9px}}`;document.head.appendChild(s);}
-  async function run(){injectStyle();const db=client();if(!db){document.documentElement.classList.remove('sm-content-loading');return;}try{const[c,media]=await Promise.all([db.from('site_content').select('content_key,content,section,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order'),db.from('site_media').select('section,slot_key,image_url,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order')]);
+  async function run(){injectStyle();const db=client();if(!db){document.documentElement.classList.remove('sm-content-loading');return;}try{const[c,media]=await Promise.all([db.from('site_content').select('content_key,content,section,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order'),db.from('site_media').select('section,slot_key,label,image_url,alt_text,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order')]);
       const mediaPromise=!media.error ? applyMedia(media.data||[]) : Promise.resolve();
       if(!c.error)applyContent(c.data||[]);
       await mediaPromise;
