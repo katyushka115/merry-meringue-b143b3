@@ -1,6 +1,5 @@
 (() => {
-  // Do not hide the page while dynamic content is loading.
-  // The static HTML is the instant first paint; Supabase only enriches it.
+  // Never block first paint while Supabase content is loading.
   const load = (src) => new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
@@ -12,7 +11,11 @@
   const waitForContent = () => new Promise((resolve) => {
     const started = Date.now();
     const check = () => {
-      if (document.body.classList.contains('sm-content-ready') || Date.now() - started > 6000) {
+      if (
+        document.documentElement.classList.contains('sm-content-ready') ||
+        document.body.classList.contains('sm-content-ready') ||
+        Date.now() - started > 6000
+      ) {
         resolve();
         return;
       }
