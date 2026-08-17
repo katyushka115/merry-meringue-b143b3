@@ -2,7 +2,7 @@
   const URL = 'https://avlozhwwvjqiypifoxox.supabase.co';
   const KEY = 'sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
   const MAP = 'https://yandex.ru/maps/?text=' + encodeURIComponent('г. Москва, Ленинский проспект, 94А');
-  const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtua1mNWRi&utm_source=qr';
+  const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
 
   const pendingStyle = document.createElement('style');
   pendingStyle.id = 'sm-site-content-pending';
