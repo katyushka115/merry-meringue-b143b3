@@ -43,12 +43,22 @@ jobs:
               s = s.replace('</body>', hide + '</body>', 1)
           p.write_text(s, encoding='utf-8')
           PY
-      - name: Optimize main hero image loading
+      - name: Integrate public site content loader and optimize hero
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
+
+          # The public site must load collection labels/media from Supabase.
+          # Keep this integration in the published HTML so admin changes are reflected on the live site.
+          loader = '<script src="assets/site-content-loader.js?v=20260817-1"></script>'
+          if loader not in s:
+              marker = '<script src="assets/order-flow.js?v=20260815-2"></script>'
+              if marker in s:
+                  s = s.replace(marker, loader + '\n  ' + marker, 1)
+              else:
+                  s = s.replace('</body>', loader + '\n</body>', 1)
 
           preload = '<link rel="preload" as="image" href="assets/bouquet-6.svg" fetchpriority="high">'
           if preload not in s:
@@ -75,5 +85,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add admin/index.html index.html
-          git diff --cached --quiet || git commit -m 'Load hero image immediately'
+          git diff --cached --quiet || git commit -m 'Load public site content from Supabase'
           git push
