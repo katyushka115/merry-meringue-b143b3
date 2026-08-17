@@ -27,7 +27,7 @@
   ].map(([id,n])=>`<button type="button" class="smbe-tab secondary" data-b="${id}">${n}</button>`).join('')}</div><div id="smbe-panel"><p>Выберите блок.</p></div></div>`;
   document.getElementById('app').appendChild(section);
 
-  const sectionMap={home:'Главная',studio:'О студии',collections:'Коллекции',bouquets:'Букеты',life:'Жизнь студии',philosophy:'Философия',contacts:'Контакты'};
+  const sectionMap={home:'Главная',studio:'О студии',collections:'Коллекции',bouquets:'Букеты',life:'Жизнь студии',custom:'На заказ',final:'Финальный блок',philosophy:'Философия',contacts:'Контакты'};
   const mediaSectionFor=id=>({life:['Жизнь студии','life_studio'],custom:'На заказ',final:'Финальный блок'}[id] || sectionMap[id]);
   const hasPhotos=new Set(['home','collections','bouquets','life','custom','final']);
   const allTabIds=['products','appearance','texts','orders','settings','site-media','site-editor'];
