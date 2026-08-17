@@ -30,6 +30,7 @@
     style.textContent = `
       .sm-studio-route-link { display:inline-flex; align-items:center; gap:7px; margin-top:10px; color:inherit; text-decoration:underline; text-underline-offset:4px; }
       .sm-hero-note-fallback { position:absolute; z-index:3; right:24px; bottom:24px; max-width:300px; color:#fff; font-size:11px; line-height:1.35; letter-spacing:.04em; text-align:right; }
+      .sm-image-pending { visibility:hidden !important; }
       @media (max-width:760px) {
         .hero-visual { position:relative; }
         .hero-visual .hero-note, .hero-visual .sm-hero-note-fallback { display:block !important; right:18px; bottom:18px; max-width:72%; font-size:10px; line-height:1.35; text-align:right; }
@@ -139,10 +140,20 @@
 
   function applyImage(img, url, fallback) {
     if (!img) return;
-    if (url) {
+    if (!url) { img.classList.remove('sm-image-pending'); return; }
+    img.classList.add('sm-image-pending');
+    const preload = new Image();
+    preload.onload = () => {
+      img.onload = () => img.classList.remove('sm-image-pending');
       img.src = url;
-      img.onerror = () => { img.onerror = null; if (fallback) img.src = fallback; };
-    }
+      if (img.complete) img.classList.remove('sm-image-pending');
+    };
+    preload.onerror = () => {
+      img.classList.remove('sm-image-pending');
+      img.onerror = null;
+      if (fallback) img.src = fallback;
+    };
+    preload.src = url;
   }
 
   async function loadAppearance() {
@@ -181,7 +192,7 @@
     if (!products.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px">Каталог скоро пополнится.</p>'; return; }
     grid.innerHTML = products.map((p, i) => `
       <article class="product visible" data-reveal="false">
-        <div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(p.image_url || `assets/bouquet-${(i%6)+1}.svg`)}" alt="${esc(p.name)}" loading="eager" onerror="this.onerror=null;this.src='assets/bouquet-${(i%6)+1}.svg'"></div>
+        <div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img class="${p.image_url ? 'sm-image-pending' : ''}" src="${esc(p.image_url || `assets/bouquet-${(i%6)+1}.svg`)}" alt="${esc(p.name)}" loading="eager" onload="this.classList.remove('sm-image-pending')" onerror="this.classList.remove('sm-image-pending');this.onerror=null;this.src='assets/bouquet-${(i%6)+1}.svg'"></div>
         <div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description || '')}</p><p><strong>${Number(p.price || 0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-product-id="${esc(p.id)}">Заказать</button></div>
       </article>`).join('');
   }
