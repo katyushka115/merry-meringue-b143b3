@@ -22,13 +22,7 @@ jobs:
           s = p.read_text(encoding='utf-8')
           tag = '<script src="site-editor/site-media-admin.js"></script>'
           if tag not in s:
-              marker = '</body>'
-              if marker not in s:
-                  raise SystemExit('admin/index.html has no closing body tag')
-              s = s.replace(marker, tag + marker, 1)
-
-          # Keep the old text editor implementation and its database records intact,
-          # but remove only its legacy tab/section from the visible admin UI.
+              s = s.replace('</body>', tag + '</body>', 1)
           hide = '''<script>(function(){
             function hideLegacyTextEditor(){
               var tab=document.querySelector('.tabs [data-tab="texts"]');
@@ -43,47 +37,34 @@ jobs:
               s = s.replace('</body>', hide + '</body>', 1)
           p.write_text(s, encoding='utf-8')
           PY
-      - name: Integrate public site content loader and optimize hero
+      - name: Integrate public site content loader
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-
-          # The public site must load collection labels/media from Supabase.
-          # Keep this integration in the published HTML so admin changes are reflected on the live site.
-          loader = '<script src="assets/site-content-loader.js?v=20260817-1"></script>'
-          if loader not in s:
+          loader = '<script src="assets/site-content-loader.js?v=20260817-2"></script>'
+          if 'assets/site-content-loader.js' not in s:
               marker = '<script src="assets/order-flow.js?v=20260815-2"></script>'
               if marker in s:
                   s = s.replace(marker, loader + '\n  ' + marker, 1)
               else:
                   s = s.replace('</body>', loader + '\n</body>', 1)
-
-          preload = '<link rel="preload" as="image" href="assets/bouquet-6.svg" fetchpriority="high">'
-          if preload not in s:
-              marker = '<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>'
-              if marker not in s:
-                  raise SystemExit('font preconnect marker not found')
-              s = s.replace(marker, marker + '\n  ' + preload, 1)
-
-          old_css = '.hero-visual img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);animation:settle 1.4s cubic-bezier(.2,.7,.2,1) both}'
-          new_css = '.hero-visual img{width:100%;height:100%;object-fit:cover;transform:scale(1.04)}'
-          if old_css in s:
-              s = s.replace(old_css, new_css, 1)
-          s = s.replace('@keyframes settle{from{opacity:0;transform:scale(1.12)}to{opacity:1;transform:scale(1.04)}}\n', '', 1)
-
-          old_img = '<img src="assets/bouquet-6.svg" alt="Авторский букет SM Flowers">'
-          new_img = '<img src="assets/bouquet-6.svg" alt="Авторский букет SM Flowers" fetchpriority="high" loading="eager" decoding="async">'
-          if old_img in s:
-              s = s.replace(old_img, new_img, 1)
-
           p.write_text(s, encoding='utf-8')
           PY
-      - name: Commit integration and performance changes
+      - name: Verify public loader is present
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s = Path('index.html').read_text(encoding='utf-8')
+          if 'assets/site-content-loader.js' not in s:
+              raise SystemExit('Public site loader is missing from index.html')
+          print('Public site loader is present')
+          PY
+      - name: Commit integration changes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add admin/index.html index.html
-          git diff --cached --quiet || git commit -m 'Load public site content from Supabase'
+          git diff --cached --quiet || git commit -m 'Connect public collections to Supabase content'
           git push
