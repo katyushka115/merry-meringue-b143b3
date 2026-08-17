@@ -4,16 +4,18 @@
   const MAP = 'https://yandex.ru/maps/?text=' + encodeURIComponent('г. Москва, Ленинский проспект, 94А');
   const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';
 
-  // Не скрываем весь сайт во время запроса: из-за этого при обновлении
-  // появлялась старая разметка/заглушки после снятия блокировки.
-  // Скрываем только изображения, которые должны быть заменены данными из админки.
+  // Синхронно скрываем только динамические изображения. Текст и фотографии
+  // показываются вместе после того, как контент и изображения готовы.
   const pendingStyle = document.createElement('style');
   pendingStyle.id = 'sm-site-content-pending';
   pendingStyle.textContent = `
     .sm-dynamic-photo-pending{visibility:hidden!important}
     .sm-dynamic-photo-ready{visibility:visible!important}
+    html.sm-content-loading .sm-dynamic-content{visibility:hidden!important}
+    html.sm-content-ready .sm-dynamic-content{visibility:visible!important}
   `;
   document.head.appendChild(pendingStyle);
+  document.documentElement.classList.add('sm-content-loading');
 
   const setText=(el,value)=>{if(el)el.textContent=String(value??'');};
   const setHref=(el,value)=>{if(el&&value){el.href=value;el.target='_blank';el.rel='noopener noreferrer';}};
@@ -31,22 +33,38 @@
     document.querySelectorAll(selectors.join(',')).forEach(img=>img.classList.add('sm-dynamic-photo-pending'));
   }
   function prepareImage(img,rawUrl,priority=false){
-    if(!img)return;
-    if(!rawUrl){img.classList.remove('sm-dynamic-photo-pending');return;}
+    if(!img)return Promise.resolve(false);
+    if(!rawUrl){img.classList.remove('sm-dynamic-photo-pending');return Promise.resolve(true);}
     const width=Math.min(Math.max(Math.round((window.innerWidth||1200)*(window.devicePixelRatio||1)),480),1800);
     img.loading=priority?'eager':'lazy';img.decoding='async';if(priority)img.fetchPriority='high';img.dataset.smRawUrl=rawUrl;img.classList.add('sm-dynamic-photo-pending');
-    const optimized=optimizedImageUrl(rawUrl,width);const preload=new Image();preload.decoding='async';
-    const show=(src)=>{img.src=src;img.classList.remove('sm-dynamic-photo-pending');img.classList.add('sm-dynamic-photo-ready');};
-    preload.onload=()=>show(optimized);
-    preload.onerror=()=>{const fallback=new Image();fallback.onload=()=>show(rawUrl);fallback.onerror=()=>img.classList.remove('sm-dynamic-photo-pending');fallback.src=rawUrl;};
-    preload.src=optimized;
+    const optimized=optimizedImageUrl(rawUrl,width);
+    return new Promise(resolve=>{
+      const show=(src)=>{img.src=src;img.classList.remove('sm-dynamic-photo-pending');img.classList.add('sm-dynamic-photo-ready');resolve(true);};
+      const preload=new Image();preload.decoding='async';
+      preload.onload=()=>show(optimized);
+      preload.onerror=()=>{const fallback=new Image();fallback.onload=()=>show(rawUrl);fallback.onerror=()=>{img.classList.remove('sm-dynamic-photo-pending');resolve(false);};fallback.src=rawUrl;};
+      preload.src=optimized;
+    });
   }
-  function applyMedia(rows){const by=Object.fromEntries(rows.map(r=>[r.slot_key,r]));prepareImage(document.querySelector('.hero-visual img'),by.hero?.image_url,true);const cards=document.querySelectorAll('.collection-card');['collection_1','collection_2','collection_3','collection_4'].forEach((k,i)=>{if(cards[i])prepareImage(cards[i].querySelector('img'),by[k]?.image_url);});if(by.custom_art?.image_url)prepareImage(document.querySelector('.statement-art img'),by.custom_art.image_url);else prepareImage(document.querySelector('.statement-art img'),null);
-    const gallery=document.querySelectorAll('.gallery-item img');const keys=['life_photo_1','life_photo_2','life_photo_3','life_photo_4','gallery_photo_1','gallery_photo_2','gallery_photo_3','gallery_photo_4'];keys.forEach((k,i)=>{const row=by[k];if(gallery[i])prepareImage(gallery[i],row?.image_url);});
-    if(by.final_art?.image_url)prepareImage(document.querySelector('.final-art img'),by.final_art.image_url);else prepareImage(document.querySelector('.final-art img'),null);
+  async function applyMedia(rows){const by=Object.fromEntries(rows.map(r=>[r.slot_key,r]));const jobs=[];
+    jobs.push(prepareImage(document.querySelector('.hero-visual img'),by.hero?.image_url,true));
+    const cards=document.querySelectorAll('.collection-card');['collection_1','collection_2','collection_3','collection_4'].forEach((k,i)=>{if(cards[i])jobs.push(prepareImage(cards[i].querySelector('img'),by[k]?.image_url));});
+    jobs.push(prepareImage(document.querySelector('.statement-art img'),by.custom_art?.image_url));
+    const gallery=document.querySelectorAll('.gallery-item img');const keys=['life_photo_1','life_photo_2','life_photo_3','life_photo_4','gallery_photo_1','gallery_photo_2','gallery_photo_3','gallery_photo_4'];keys.forEach((k,i)=>{const row=by[k];if(gallery[i])jobs.push(prepareImage(gallery[i],row?.image_url));});
+    jobs.push(prepareImage(document.querySelector('.final-art img'),by.final_art?.image_url));
+    await Promise.all(jobs);
   }
   function injectStyle(){if(document.getElementById('sm-site-content-style'))return;const s=document.createElement('style');s.id='sm-site-content-style';s.textContent=`.sm-life-unique-note{margin:18px 0 0;max-width:620px;font-family:var(--serif);font-size:20px;font-style:italic;line-height:1.25;color:rgba(31,38,30,.72)}.sm-studio-route-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:rgba(255,255,255,.82);text-decoration:underline;text-underline-offset:4px}.gallery-item img,.collection-card img,.hero-visual img,.statement-art img,.final-art img{content-visibility:auto}@media(max-width:760px){.sm-life-unique-note{font-size:18px;margin:14px 20px 0}.sm-studio-route-link{margin-top:9px}}`;document.head.appendChild(s);}
-  async function run(){injectStyle();const db=client();if(!db){document.querySelectorAll('.sm-dynamic-photo-pending').forEach(el=>el.classList.remove('sm-dynamic-photo-pending'));return;}try{const[c,media]=await Promise.all([db.from('site_content').select('content_key,content,section,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order'),db.from('site_media').select('section,slot_key,image_url,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order')]);if(!c.error)applyContent(c.data||[]);if(!media.error)applyMedia(media.data||[]);else document.querySelectorAll('.sm-dynamic-photo-pending').forEach(el=>el.classList.remove('sm-dynamic-photo-pending'));}catch(_){document.querySelectorAll('.sm-dynamic-photo-pending').forEach(el=>el.classList.remove('sm-dynamic-photo-pending'));}}
+  async function run(){injectStyle();const db=client();if(!db){document.documentElement.classList.remove('sm-content-loading');return;}try{const[c,media]=await Promise.all([db.from('site_content').select('content_key,content,section,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order'),db.from('site_media').select('section,slot_key,image_url,is_visible,sort_order').eq('is_visible',true).order('section').order('sort_order')]);
+      if(media.error){document.querySelectorAll('.sm-dynamic-photo-pending').forEach(el=>el.classList.remove('sm-dynamic-photo-pending'));}
+      // Сначала параллельно подготавливаем все фотографии, затем одной операцией
+      // применяем текст и показываем готовые изображения — без разрыва между ними.
+      const mediaReady=!media.error ? applyMedia(media.data||[]) : Promise.resolve();
+      await mediaReady;
+      if(!c.error)applyContent(c.data||[]);
+      document.documentElement.classList.remove('sm-content-loading');
+      document.documentElement.classList.add('sm-content-ready');
+    }catch(_){document.querySelectorAll('.sm-dynamic-photo-pending').forEach(el=>el.classList.remove('sm-dynamic-photo-pending'));document.documentElement.classList.remove('sm-content-loading');document.documentElement.classList.add('sm-content-ready');}}
   markDynamicImagesPending();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0),{once:true});else setTimeout(run,0);
 })();
