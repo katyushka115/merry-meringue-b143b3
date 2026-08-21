@@ -100,30 +100,25 @@
     } catch (_) { return src; }
   }
 
-  function preload(src, width, priority = false) {
-    const link = document.createElement('link'); link.rel = 'preload'; link.as = 'image'; link.href = optimized(src, width);
-    if (priority) link.fetchPriority = 'high'; document.head.appendChild(link);
-  }
-
   function setImage(img, src, width, priority = false) {
     if (!img || !src) return;
-    const url = optimized(src, width);
-    preload(src, width, priority);
-    img.src = url; img.loading = priority ? 'eager' : 'lazy'; img.decoding = 'async';
-    if (priority) img.fetchPriority = 'high';
+    img.src = optimized(src, width);
+    img.loading = priority ? 'eager' : 'lazy';
+    img.decoding = 'async';
+    img.fetchPriority = priority ? 'high' : 'low';
   }
 
   function paintImages() {
     setImage(document.querySelector('.hero-visual img'), IMG.hero, 1500, true);
-    document.querySelectorAll('.collection-card img').forEach((img, i) => setImage(img, [IMG.collection1, IMG.collection2, IMG.collection3][i], 1000, i === 0));
-    setImage(document.querySelector('.statement-art img'), IMG.custom, 1000);
-    document.querySelectorAll('.gallery-item img').forEach((img, i) => setImage(img, [IMG.life1, IMG.life2, IMG.life3, IMG.life4][i], 900));
-    setImage(document.querySelector('.final-art img'), IMG.final, 1100);
+    document.querySelectorAll('.collection-card img').forEach((img, i) => setImage(img, [IMG.collection1, IMG.collection2, IMG.collection3][i], 1000, false));
+    setImage(document.querySelector('.statement-art img'), IMG.custom, 1000, false);
+    document.querySelectorAll('.gallery-item img').forEach((img, i) => setImage(img, [IMG.life1, IMG.life2, IMG.life3, IMG.life4][i], 900, false));
+    setImage(document.querySelector('.final-art img'), IMG.final, 1100, false);
   }
 
   paintText();
   paintImages();
 
   const load = src => new Promise((resolve, reject) => { const s=document.createElement('script'); s.src=src; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); });
-  load('assets/order-flow-core.js?v=20260817-fast3').then(() => load('assets/studio-contact-order.js?v=20260817-fast3')).catch(err => console.error('SM Flowers loader error:', err));
+  load('assets/order-flow-core.js?v=20260821-fast4').then(() => load('assets/studio-contact-order.js?v=20260821-fast4')).catch(err => console.error('SM Flowers loader error:', err));
 })();
