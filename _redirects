@@ -1,3 +1,7 @@
+/supabase/rest/v1/* https://avlozhwwvjqiypifoxox.supabase.co/rest/v1/:splat 200
+/supabase/auth/v1/* https://avlozhwwvjqiypifoxox.supabase.co/auth/v1/:splat 200
+/supabase/storage/v1/* https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/:splat 200
+/supabase/realtime/v1/* https://avlozhwwvjqiypifoxox.supabase.co/realtime/v1/:splat 200
 /assets/bouquet-1.svg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg?width=1200&quality=78&resize=contain 302
 /assets/bouquet-2.svg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/collections/81b226c1-8f99-41a3-a060-f95cadc16431.jpeg?width=1200&quality=78&resize=contain 302
 /assets/bouquet-3.svg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/site-media/36fe864b-da66-4022-bcda-d81b29c7c83c.jpeg?width=1200&quality=78&resize=contain 302
