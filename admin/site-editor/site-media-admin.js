@@ -5,6 +5,18 @@
   const db = window.supabase?.createClient ? window.supabase.createClient(URL, KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}) : null;
   if (!db) return;
 
+  // Админка должна требовать повторный вход при каждом новом открытии.
+  // Сессию, сохранённую предыдущим посещением, очищаем до события load,
+  // чтобы основной скрипт админки не смог автоматически открыть панель.
+  try {
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      for (let i = storage.length - 1; i >= 0; i--) {
+        const key = storage.key(i);
+        if (key && key.includes('-auth-token')) storage.removeItem(key);
+      }
+    }
+  } catch (_) {}
+
   const esc = x => String(x ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
   const tabs = document.querySelector('.tabs');
   if (!tabs || document.querySelector('[data-tab="site-editor"]')) return;
