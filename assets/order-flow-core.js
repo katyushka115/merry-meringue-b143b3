@@ -84,17 +84,7 @@
   async function getClient() {
     if (client?.rpc) return client;
     if (window.smSupabase?.rpc) { client = window.smSupabase; return client; }
-    if (window.supabase?.createClient) { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY); return client; }
-    if (!window.__smSupabaseModulePromise) {
-      window.__smSupabaseModulePromise = import(SUPABASE_CDN).then(mod => {
-        const createClient = mod.createClient || mod.default?.createClient;
-        if (!createClient) throw new Error('Supabase SDK не загрузился');
-        return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-      });
-    }
-    client = await window.__smSupabaseModulePromise;
-    window.smSupabase = client;
-    return client;
+    throw new Error('Supabase client is not initialized');
   }
 
   function socialLinks(settings = {}) {
