@@ -1,16 +1,15 @@
 (() => {
-  const SUPABASE_ORIGIN = 'https://avlozhwwvjqiypifoxox.supabase.co';
   const IMG = {
-    hero: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg`,
-    collection1: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg`,
-    collection2: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/collections/81b226c1-8f99-41a3-a060-f95cadc16431.jpeg`,
-    collection3: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/collections/ddf86b0f-28be-47cd-9df9-b4fb27650ba4.jpeg`,
-    custom: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/36fe864b-da66-4022-bcda-d81b29c7c83c.jpeg`,
-    life1: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/aa61840b-6cdc-4995-bc66-254fd06b79c6.jpeg`,
-    life2: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/43eded19-9452-4166-94d5-fd30df355827.jpeg`,
-    life3: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/8477d15f-8019-4764-99e9-989a8e45bb6e.jpeg`,
-    life4: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/2e58be79-a7b9-4702-8467-3891417abe42.jpeg`,
-    final: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg`
+    hero: '/media/hero.jpg',
+    collection1: '/media/collection-1.jpg',
+    collection2: '/media/collection-2.jpg',
+    collection3: '/media/collection-3.jpg',
+    custom: '/media/custom.jpg',
+    life1: '/media/life-1.jpg',
+    life2: '/media/life-2.jpg',
+    life3: '/media/life-3.jpg',
+    life4: '/media/life-4.jpg',
+    final: '/media/final.jpg'
   };
 
   const TEXT = {
@@ -91,31 +90,23 @@
   }
 
   function optimized(src, width) {
+    if (typeof src === 'string' && src.startsWith('/')) return src;
     try {
       const u = new URL(src);
       u.pathname = u.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
       u.searchParams.set('width', String(width));
       u.searchParams.set('quality', '78');
       u.searchParams.set('resize', 'cover');
-      if (u.origin === SUPABASE_ORIGIN) return '/supabase' + u.pathname + u.search;
       return u.toString();
     } catch (_) { return src; }
   }
 
   function setImage(img, src, width, priority = false) {
     if (!img || !src) return;
-    const proxied = optimized(src, width);
-    img.src = proxied;
+    img.src = optimized(src, width);
     img.loading = priority ? 'eager' : 'lazy';
     img.decoding = 'async';
     img.fetchPriority = priority ? 'high' : 'low';
-    img.dataset.smOriginalSrc = src;
-    img.addEventListener('error', () => {
-      if (img.dataset.smProxyRetried !== 'true') {
-        img.dataset.smProxyRetried = 'true';
-        img.src = src;
-      }
-    }, {once:true});
   }
 
   function paintImages() {
@@ -130,5 +121,5 @@
   paintImages();
 
   const load = src => new Promise((resolve, reject) => { const s=document.createElement('script'); s.src=src; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); });
-  load('assets/order-flow-core.js?v=20260821-fast5').then(() => load('assets/studio-contact-order.js?v=20260821-fast5')).catch(err => console.error('SM Flowers loader error:', err));
+  load('assets/order-flow-core.js?v=20260821-fast6').then(() => load('assets/studio-contact-order.js?v=20260821-fast6')).catch(err => console.error('SM Flowers loader error:', err));
 })();
