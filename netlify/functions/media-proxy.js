@@ -17,10 +17,9 @@ const FIXED = {
 
 export default async (req) => {
   const incoming = new URL(req.url);
-  const rewrittenPath = incoming.pathname.startsWith(MARKER)
-    ? `/media${incoming.pathname.slice(MARKER.length) || '/'}'
+  const pathname = incoming.pathname.startsWith(MARKER)
+    ? `/media${incoming.pathname.slice(MARKER.length)}`
     : incoming.pathname;
-  const pathname = rewrittenPath.replace(/'$/, '');
   let target = FIXED[pathname] || '';
 
   if (pathname.startsWith('/media/product/')) {
