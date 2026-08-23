@@ -7,6 +7,11 @@
 [functions]
   directory = "netlify/functions"
 
+[[redirects]]
+  from = "/media/*"
+  to = "/.netlify/functions/media-proxy/media/:splat"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
