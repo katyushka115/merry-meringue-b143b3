@@ -2,7 +2,7 @@
 /supabase/auth/v1/* https://avlozhwwvjqiypifoxox.supabase.co/auth/v1/:splat 200
 /supabase/storage/v1/* https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/:splat 200
 /supabase/realtime/v1/* https://avlozhwwvjqiypifoxox.supabase.co/realtime/v1/:splat 200
-/media/product/* /.netlify/functions/product-image?path=:splat 200
+/media/product/* https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/products/:splat 200
 /media/hero.jpg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg?width=1500&quality=78&resize=cover 200
 /media/collection-1.jpg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg?width=1000&quality=78&resize=cover 200
 /media/collection-2.jpg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/collections/81b226c1-8f99-41a3-a060-f95cadc16431.jpeg?width=1000&quality=78&resize=cover 200
