@@ -1,7 +1,5 @@
+# HTML must always revalidate so Safari/Chrome do not keep an old index after deploy.
 /*
-  HTML must always revalidate so Safari/Chrome do not keep an old index after deploy.
-*/
-/
   Cache-Control: public, max-age=0, must-revalidate
 
 /assets/*
