@@ -27,7 +27,10 @@ export default async (req) => {
     if (!/^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(path) || path.includes('..')) {
       return new Response('Bad image path', { status: 400 });
     }
-    target = `/storage/v1/object/public/${BUCKET}/products/${path}`;
+    const objectPath = path.startsWith('products/') || path.startsWith('collections/') || path.startsWith('site-media/')
+      ? path
+      : path;
+    target = `/storage/v1/object/public/${BUCKET}/${objectPath}`;
   }
 
   if (!target) return new Response('Not found', { status: 404 });
