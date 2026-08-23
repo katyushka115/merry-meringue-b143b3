@@ -1,15 +1,16 @@
 (() => {
+  const SUPABASE_ORIGIN = 'https://avlozhwwvjqiypifoxox.supabase.co';
   const IMG = {
-    hero: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg',
-    collection1: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg',
-    collection2: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/collections/81b226c1-8f99-41a3-a060-f95cadc16431.jpeg',
-    collection3: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/collections/ddf86b0f-28be-47cd-9df9-b4fb27650ba4.jpeg',
-    custom: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/36fe864b-da66-4022-bcda-d81b29c7c83c.jpeg',
-    life1: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/aa61840b-6cdc-4995-bc66-254fd06b79c6.jpeg',
-    life2: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/43eded19-9452-4166-94d5-fd30df355827.jpeg',
-    life3: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/8477d15f-8019-4764-99e9-989a8e45bb6e.jpeg',
-    life4: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/2e58be79-a7b9-4702-8467-3891417abe42.jpeg',
-    final: 'https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/bouquets/site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg'
+    hero: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg`,
+    collection1: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg`,
+    collection2: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/collections/81b226c1-8f99-41a3-a060-f95cadc16431.jpeg`,
+    collection3: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/collections/ddf86b0f-28be-47cd-9df9-b4fb27650ba4.jpeg`,
+    custom: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/36fe864b-da66-4022-bcda-d81b29c7c83c.jpeg`,
+    life1: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/aa61840b-6cdc-4995-bc66-254fd06b79c6.jpeg`,
+    life2: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/43eded19-9452-4166-94d5-fd30df355827.jpeg`,
+    life3: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/8477d15f-8019-4764-99e9-989a8e45bb6e.jpeg`,
+    life4: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/2e58be79-a7b9-4702-8467-3891417abe42.jpeg`,
+    final: `${SUPABASE_ORIGIN}/storage/v1/object/public/bouquets/site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg`
   };
 
   const TEXT = {
@@ -96,16 +97,25 @@
       u.searchParams.set('width', String(width));
       u.searchParams.set('quality', '78');
       u.searchParams.set('resize', 'cover');
+      if (u.origin === SUPABASE_ORIGIN) return '/supabase' + u.pathname + u.search;
       return u.toString();
     } catch (_) { return src; }
   }
 
   function setImage(img, src, width, priority = false) {
     if (!img || !src) return;
-    img.src = optimized(src, width);
+    const proxied = optimized(src, width);
+    img.src = proxied;
     img.loading = priority ? 'eager' : 'lazy';
     img.decoding = 'async';
     img.fetchPriority = priority ? 'high' : 'low';
+    img.dataset.smOriginalSrc = src;
+    img.addEventListener('error', () => {
+      if (img.dataset.smProxyRetried !== 'true') {
+        img.dataset.smProxyRetried = 'true';
+        img.src = src;
+      }
+    }, {once:true});
   }
 
   function paintImages() {
@@ -120,5 +130,5 @@
   paintImages();
 
   const load = src => new Promise((resolve, reject) => { const s=document.createElement('script'); s.src=src; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); });
-  load('assets/order-flow-core.js?v=20260821-fast4').then(() => load('assets/studio-contact-order.js?v=20260821-fast4')).catch(err => console.error('SM Flowers loader error:', err));
+  load('assets/order-flow-core.js?v=20260821-fast5').then(() => load('assets/studio-contact-order.js?v=20260821-fast5')).catch(err => console.error('SM Flowers loader error:', err));
 })();
