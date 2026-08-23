@@ -1,3 +1,4 @@
+/supabase/rest/* /.netlify/functions/supabase-proxy/rest/v1/:splat 200
 /supabase/* /.netlify/functions/supabase-proxy/:splat 200
 /media/* /.netlify/functions/media-proxy/:splat 200
 /assets/bouquet-1.svg https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/render/image/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg?width=1200&quality=78&resize=contain 200
