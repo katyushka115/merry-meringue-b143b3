@@ -1,5 +1,6 @@
 const SUPABASE_ORIGIN = 'https://avlozhwwvjqiypifoxox.supabase.co';
 const BUCKET = 'bouquets';
+const MARKER = '/.netlify/functions/media-proxy';
 
 const FIXED = {
   '/media/hero.jpg': '/storage/v1/render/image/public/bouquets/site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg?width=1500&quality=78&resize=cover',
@@ -16,10 +17,14 @@ const FIXED = {
 
 export default async (req) => {
   const incoming = new URL(req.url);
-  let target = FIXED[incoming.pathname] || '';
+  const rewrittenPath = incoming.pathname.startsWith(MARKER)
+    ? `/media${incoming.pathname.slice(MARKER.length) || '/'}'
+    : incoming.pathname;
+  const pathname = rewrittenPath.replace(/'$/, '');
+  let target = FIXED[pathname] || '';
 
-  if (incoming.pathname.startsWith('/media/product/')) {
-    const path = incoming.pathname.slice('/media/product/'.length);
+  if (pathname.startsWith('/media/product/')) {
+    const path = pathname.slice('/media/product/'.length);
     if (!/^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(path) || path.includes('..')) {
       return new Response('Bad image path', { status: 400 });
     }
