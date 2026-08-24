@@ -1,22 +1,12 @@
-/* Prevent dynamic Supabase photos from flashing local placeholder SVGs. */
+/* Keep production images visible while same-origin media is loading. */
 (function () {
   'use strict';
 
-  var PLACEHOLDER_RE = /(?:^|\/)assets\/bouquet-[^/?#]+\.svg(?:[?#].*)?$/i;
-
-  function isDynamicImage(img) {
-    if (!img || img.tagName !== 'IMG') return false;
-    var src = img.getAttribute('src') || '';
-    return PLACEHOLDER_RE.test(src) || img.closest('.collection-card, .statement-art, .product-image');
-  }
-
   function prepare(img) {
-    if (!isDynamicImage(img) || img.dataset.dynamicPreloadReady === '1') return;
+    if (!img || img.tagName !== 'IMG' || img.dataset.dynamicPreloadReady === '1') return;
     img.dataset.dynamicPreloadReady = '1';
-    img.style.visibility = 'hidden';
-    img.addEventListener('load', function () {
-      img.style.visibility = 'visible';
-    }, { once: true });
+    img.loading = img.loading || 'eager';
+    img.decoding = img.decoding || 'async';
   }
 
   document.querySelectorAll('img').forEach(prepare);
