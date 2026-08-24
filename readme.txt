@@ -1,13 +1,8 @@
 SM-FLOWERS — версия для Netlify
 
-Загрузка:
-1. Откройте Netlify.
-2. Перейдите в Deploy / Add new project.
-3. Выберите загрузку проекта (Upload project files).
-4. Загрузите содержимое этого архива или ZIP целиком.
-5. После публикации подключите домен smflowers.ru в настройках домена.
+Production notes:
+- Public pages do not depend on third-party font CDNs.
+- Public ordering uses the same-origin Supabase proxy.
+- Media is served through the same-origin Netlify media proxy.
+- DNS/domain configuration is managed separately from this repository.
 
-Важно:
-- Изображения букетов сейчас являются подготовленными визуальными макетами и легко заменяются файлами в папке assets.
-- Кнопка СБП пока демонстрационная. Реальную оплату подключим отдельным этапом через выбранного платежного провайдера.
-- Админ-панель для самостоятельной замены каталога можно подключить следующим этапом.
