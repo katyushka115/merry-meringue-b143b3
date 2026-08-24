@@ -29,8 +29,7 @@ export default async (req) => {
   let objectPath = FIXED[pathname] || '';
 
   if (pathname.startsWith('/media/product/')) {
-    let path = pathname.slice('/media/product/'.length);
-    if (path.startsWith('products/')) path = path.slice('products/'.length);
+    const path = pathname.slice('/media/product/'.length);
     if (!validPath(path)) return new Response('Bad image path', { status: 400 });
     objectPath = path.startsWith('products/') ? path : path;
   }
