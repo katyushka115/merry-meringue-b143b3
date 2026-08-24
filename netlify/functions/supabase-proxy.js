@@ -2,16 +2,23 @@ const SUPABASE_ORIGIN = process.env.SUPABASE_URL || 'https://avlozhwwvjqiypifoxo
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_SECRET_KEY || 'sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
 const ALLOWED_PREFIXES = ['/rest/v1/', '/storage/v1/', '/auth/v1/', '/realtime/v1/'];
 
-export default async (req) => {
-  const incoming = new URL(req.url);
+exports.handler = async (event) => {
+  const incoming = new URL(event.rawUrl || `https://${event.headers?.host || 'localhost'}${event.path || '/'}`);
   let path = incoming.pathname;
   if (path.startsWith('/supabase/')) path = path.slice('/supabase'.length) || '/';
   else if (path.startsWith('/.netlify/functions/supabase-proxy')) path = path.slice('/.netlify/functions/supabase-proxy'.length) || '/';
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': incoming.origin || '*', 'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'apikey,authorization,content-type,x-client-info' } });
-  if (!SUPABASE_KEY) return new Response('Supabase proxy is not configured', { status: 500 });
-  if (!ALLOWED_PREFIXES.some(prefix => path.startsWith(prefix))) return new Response('Not found', { status: 404 });
 
-  const headers = new Headers(req.headers);
+  const origin = event.headers?.origin || '*';
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'apikey,authorization,content-type,x-client-info'
+  };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: corsHeaders, body: '' };
+  if (!SUPABASE_KEY) return { statusCode: 500, headers: corsHeaders, body: 'Supabase proxy is not configured' };
+  if (!ALLOWED_PREFIXES.some(prefix => path.startsWith(prefix))) return { statusCode: 404, headers: corsHeaders, body: 'Not found' };
+
+  const headers = new Headers(event.headers || {});
   headers.set('apikey', SUPABASE_KEY);
   if (!headers.has('authorization')) headers.set('Authorization', `Bearer ${SUPABASE_KEY}`);
   headers.delete('host');
@@ -19,22 +26,25 @@ export default async (req) => {
 
   try {
     const response = await fetch(`${SUPABASE_ORIGIN}${path}${incoming.search}`, {
-      method: req.method,
+      method: event.httpMethod,
       headers,
-      body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body,
+      body: ['GET', 'HEAD'].includes(event.httpMethod) ? undefined : event.isBase64Encoded ? Buffer.from(event.body || '', 'base64') : event.body,
       redirect: 'follow'
     });
-    const out = new Headers(response.headers);
-    out.delete('set-cookie');
-    out.set('Cache-Control', 'no-store, max-age=0');
-    out.set('X-Content-Type-Options', 'nosniff');
-    out.set('Access-Control-Allow-Origin', incoming.origin || '*');
-    out.set('Access-Control-Allow-Methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
-    out.set('Access-Control-Allow-Headers', 'apikey,authorization,content-type,x-client-info');
-    out.set('Vary', 'Origin');
-    return new Response(response.body, { status: response.status, headers: out });
+    const body = await response.text();
+    return {
+      statusCode: response.status,
+      headers: {
+        'Content-Type': response.headers.get('content-type') || 'application/json',
+        'Cache-Control': 'no-store, max-age=0',
+        'X-Content-Type-Options': 'nosniff',
+        ...corsHeaders,
+        'Vary': 'Origin'
+      },
+      body
+    };
   } catch (error) {
     console.error('supabase-proxy upstream failure', path, error);
-    return new Response('Supabase upstream unavailable', { status: 502 });
+    return { statusCode: 502, headers: corsHeaders, body: 'Supabase upstream unavailable' };
   }
 };
