@@ -23,29 +23,19 @@ const validPath = value => /^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(v
 export default async (req) => {
   const incoming = new URL(req.url);
   let pathname = incoming.pathname;
-
-  // Netlify can invoke this function in two different forms:
-  // 1) /.netlify/functions/media-proxy?path=hero.jpg
-  // 2) /.netlify/functions/media-proxy/media/hero.jpg
-  // Never prepend /media twice.
-  if (pathname.startsWith(MARKER)) {
-    const suffix = pathname.slice(MARKER.length);
-    pathname = suffix || incoming.searchParams.get('path') || '';
-  }
-  if (pathname === '/.netlify/functions/media-proxy' || pathname === '') {
-    pathname = incoming.searchParams.get('path') || '';
-  }
-  if (!pathname.startsWith('/')) pathname = `/${pathname}`;
+  if (pathname.startsWith(MARKER)) pathname = `/media${pathname.slice(MARKER.length)}`;
+  if (pathname === '/.netlify/functions/media-proxy') pathname = incoming.searchParams.get('path') || '';
 
   let objectPath = FIXED[pathname] || '';
 
   if (pathname.startsWith('/media/product/')) {
     const path = pathname.slice('/media/product/'.length);
     if (!validPath(path)) return new Response('Bad image path', { status: 400 });
-    objectPath = path;
+    objectPath = path.startsWith('products/') ? path : path;
   }
 
-  if (!objectPath || !validPath(objectPath)) return new Response('Not found', { status: 404 });
+  if (!objectPath) return new Response('Not found', { status: 404 });
+  if (!validPath(objectPath)) return new Response('Bad image path', { status: 400 });
 
   let response = null;
   let lastError = null;
