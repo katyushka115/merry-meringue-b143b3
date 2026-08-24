@@ -29,10 +29,10 @@
 
 [[redirects]]
   from = "/admin/editor"
-  to = "/admin/site-editor-v2.html"
+  to = "/admin-panel.html"
   status = 200
 
 [[redirects]]
   from = "/admin/editor/"
-  to = "/admin/site-editor-v2.html"
+  to = "/admin-panel.html"
   status = 200
