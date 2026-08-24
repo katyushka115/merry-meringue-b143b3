@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Make public index independent of blocked third-party font CDN
+      - name: Make public index independent of blocked third-party CDNs
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -25,6 +25,9 @@ jobs:
           s = '\n'.join(lines) + ('\n' if s.endswith('\n') else '')
           s = s.replace('assets/site-content-loader.js?v=20260817-2', 'assets/site-content-loader.js?v=20260823-4')
           s = s.replace('assets/order-flow.js?v=20260815-2', 'assets/order-flow.js?v=20260823-4')
+          # Never block HTML parsing on jsDelivr. The public site uses the same-origin
+          # site-content-loader and same-origin order proxy instead.
+          s = s.replace('  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\n', '')
           p.write_text(s, encoding='utf-8')
           PY
       - name: Commit cache-busted index
@@ -33,5 +36,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'Make production index independent of third-party font CDN [cache-busted]'
+          git commit -m 'Make production index independent of third-party CDN [cache-busted]'
           git push
