@@ -1,10 +1,10 @@
-/* Live site content: all editable text/media comes from Supabase through the same-origin proxy. */
+/* Live site content: editable values enhance the static production fallback. Empty CMS values never erase visible text. */
 (()=>{
   const API='/supabase', MEDIA='/media', BUCKET='bouquets';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const json=async p=>{const r=await fetch(API+p,{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json()};
   const mediaUrl=u=>{if(!u)return'';if(u.startsWith('/media/'))return u;try{const x=new URL(u),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);return i>=0?MEDIA+'/'+x.pathname.slice(i+needle.length):u}catch{return u}};
-  const setText=(selector,value)=>{const e=document.querySelector(selector);if(e&&value!=null)e.textContent=value};
+  const setText=(selector,value)=>{const e=document.querySelector(selector);const v=String(value??'').trim();if(e&&v)e.textContent=value};
   const textMap={
     'Главная':[['.hero-copy .eyebrow','hero_eyebrow'],['#hero-title','hero_title'],['.hero-description p','hero_description'],['.hero-actions .button','hero_primary_button'],['.hero-actions .text-link','hero_secondary_button']],
     'О студии':[['.intro .eyebrow','about_eyebrow'],['.intro .section-title','about_title'],['.intro-text p','about_text'],['.intro-text .text-link','about_link'],['.signature','about_signature']],
@@ -25,12 +25,15 @@
     ]);
     for(const row of texts) for(const [selector,key] of (textMap[row.section]||[])) if(row.content_key===key)setText(selector,row.content);
     const by=(section,slot)=>media.find(x=>x.section===section&&x.slot_key===mediaKey(slot))?.image_url;
-    const setImg=(selector,url)=>{const e=document.querySelector(selector);if(e&&url)e.src=mediaUrl(url)};
-    setImg('.hero-visual img',by('Главная','hero'));setImg('.statement-art img',by('На заказ','custom'));setImg('.final-art img',by('Финальный блок','final'));
-    document.querySelectorAll('.collection-card img').forEach((e,i)=>{const u=by('Коллекции',`collection_${i+1}`);if(u)e.src=mediaUrl(u)});
-    document.querySelectorAll('.gallery-item img').forEach((e,i)=>{const u=by('Жизнь студии',`life_photo_${i+1}`)||by('Жизнь студии',`gallery_photo_${i+1}`);if(u)e.src=mediaUrl(u)});
-    const g=document.getElementById('product-grid');if(g)g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}">Заказать</button></div></article>`).join('');
+    const setImg=(selector,url,fallback)=>{const e=document.querySelector(selector);if(!e||!url)return;e.src=mediaUrl(url);if(fallback)e.onerror=()=>{e.onerror=null;e.src=fallback}};
+    setImg('.hero-visual img',by('Главная','hero'),'/media/hero.jpg');
+    setImg('.statement-art img',by('На заказ','custom'),'/media/collection-2.jpg');
+    setImg('.final-art img',by('Финальный блок','final'),'/media/final.jpg');
+    document.querySelectorAll('.collection-card img').forEach((e,i)=>{const u=by('Коллекции',`collection_${i+1}`);if(u)setImg(`.collection-card:nth-child(${i+1}) img`,u,`/media/collection-${i+1}.jpg`)});
+    document.querySelectorAll('.gallery-item img').forEach((e,i)=>{const u=by('Жизнь студии',`life_photo_${i+1}`)||by('Жизнь студии',`gallery_photo_${i+1}`);if(u){e.src=mediaUrl(u);e.onerror=()=>{e.onerror=null;e.src=`/media/life-${i+1}.jpg`}}});
+    const g=document.getElementById('product-grid');
+    if(g&&Array.isArray(products)&&products.length){g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager" onerror="this.onerror=null;this.src='/media/collection-${(i%3)+1}.jpg'"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}">Заказать</button></div></article>`).join('');}
     g?.querySelectorAll('[data-bouquet]').forEach(b=>b.addEventListener('click',()=>{const selected=document.getElementById('selected-bouquet'),modal=document.getElementById('order-modal');if(selected)selected.textContent=`Вы выбрали: «${b.dataset.bouquet}»`;modal?.classList.add('open');document.body.classList.add('modal-open')}));
-  }catch(e){console.error('SM Flowers live content failed:',e)}}
+  }catch(e){console.error('SM Flowers live content unavailable; keeping static production content:',e)}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 })();
