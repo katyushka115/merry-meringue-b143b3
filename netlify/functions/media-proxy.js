@@ -2,9 +2,6 @@ const SUPABASE_ORIGIN = 'https://avlozhwwvjqiypifoxox.supabase.co';
 const BUCKET = 'bouquets';
 const MARKER = '/.netlify/functions/media-proxy';
 
-// Use the Storage object endpoint for production media. The image-rendering
-// endpoint can fail on some networks, while the public object endpoint is
-// already used successfully by the bouquet catalog.
 const FIXED = {
   '/media/hero.jpg': '/storage/v1/object/public/bouquets/site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg',
   '/media/collection-1.jpg': '/storage/v1/object/public/bouquets/collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg',
@@ -23,24 +20,33 @@ export default async (req) => {
   const pathname = incoming.pathname.startsWith(MARKER)
     ? `/media${incoming.pathname.slice(MARKER.length)}`
     : incoming.pathname;
-  let target = FIXED[pathname] || '';
+
+  let targets = [];
+  if (FIXED[pathname]) targets = [FIXED[pathname]];
 
   if (pathname.startsWith('/media/product/')) {
     const path = pathname.slice('/media/product/'.length);
     if (!/^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(path) || path.includes('..')) {
       return new Response('Bad image path', { status: 400 });
     }
-    target = `/storage/v1/object/public/${BUCKET}/${path}`;
+    const alternate = path.startsWith('products/') ? path.slice('products/'.length) : `products/${path}`;
+    targets = [
+      `/storage/v1/object/public/${BUCKET}/${path}`,
+      `/storage/v1/object/public/${BUCKET}/${alternate}`
+    ];
   }
 
-  if (!target) return new Response('Not found', { status: 404 });
+  if (!targets.length) return new Response('Not found', { status: 404 });
 
-  const response = await fetch(`${SUPABASE_ORIGIN}${target}`, { redirect: 'follow' });
-  if (!response.ok) return new Response('Image not found', { status: response.status });
+  let response;
+  for (const target of targets) {
+    const candidate = await fetch(`${SUPABASE_ORIGIN}${target}`, { redirect: 'follow' });
+    if (candidate.ok) { response = candidate; break; }
+  }
+  if (!response) return new Response('Image not found', { status: 404 });
 
   const headers = new Headers(response.headers);
   headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
   headers.set('X-Content-Type-Options', 'nosniff');
-
   return new Response(response.body, { status: 200, headers });
 };
