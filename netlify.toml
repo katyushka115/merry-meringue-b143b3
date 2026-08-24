@@ -1,6 +1,9 @@
 [build]
   publish = "."
 
+[build.processing]
+  skip_processing = true
+
 [functions]
   directory = "netlify/functions"
 
@@ -11,7 +14,7 @@
 
 [[redirects]]
   from = "/media/*"
-  to = "/.netlify/functions/media-proxy?path=:splat"
+  to = "/.netlify/functions/media-proxy/media/:splat"
   status = 200
 
 [[redirects]]
@@ -26,5 +29,12 @@
 
 [[redirects]]
   from = "/admin/editor"
-  to = "/admin-panel.html"
+  to = "/admin/site-editor/index.html"
   status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
