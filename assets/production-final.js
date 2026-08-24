@@ -1,4 +1,4 @@
-/* Final production layer: authoritative content + working image proxy. */
+/* Final production layer: authoritative fallback text and stable links. CMS controls media and bouquet order. */
 (()=>{
 const IG='https://www.instagram.com/smflowers.msk/',TG='https://t.me/smflowers_msk',MAP='https://yandex.ru/maps/?text='+encodeURIComponent('г. Москва, Ленинский проспект, 94А');
 const IMG=p=>'/media/'+p;
@@ -11,7 +11,8 @@ Object.entries(M).forEach(([s,v])=>text(s,v));
 const sig=document.querySelector('.signature');if(sig)sig.innerHTML='С любовью, SM <span aria-hidden="true">❤️</span>';
 document.querySelectorAll('a').forEach(a=>{const q=((a.getAttribute('href')||'')+' '+a.textContent).toLowerCase();if(q.includes('instagram')){a.href=IG;a.target='_blank';a.rel='noopener noreferrer'}if(q.includes('telegram')||q.includes('t.me')){a.href=TG;a.target='_blank';a.rel='noopener noreferrer'}});
 const studio=document.querySelector('.footer-column:nth-child(3)');if(studio){let a=studio.querySelector('.sm-studio-route-link');if(!a){a=document.createElement('a');a.className='sm-studio-route-link';studio.appendChild(a)}a.href=MAP;a.target='_blank';a.rel='noopener noreferrer';a.textContent='📍 Построить маршрут →';const h=[...studio.children].find(e=>e!==a&&(e.textContent||'').includes('Круглосуточно'));if(h)studio.insertBefore(a,h)}
-const media=['collection-1.jpg','collection-2.jpg','collection-3.jpg'];document.querySelectorAll('.collection-card img').forEach((im,i)=>{if(media[i])im.src=IMG(media[i]);im.loading='eager'});['life-1.jpg','life-2.jpg','life-3.jpg','life-4.jpg'].forEach((p,i)=>{const im=document.querySelectorAll('.gallery-item img')[i];if(im)im.src=IMG(p)});[['.hero-visual img','hero.jpg'],['.statement-art img','custom.jpg'],['.final-art img','final.jpg']].forEach(([s,p])=>{const im=document.querySelector(s);if(im)im.src=IMG(p)});
+[['.hero-visual img','hero.jpg'],['.statement-art img','custom.jpg'],['.final-art img','final.jpg']].forEach(([s,p])=>{const im=document.querySelector(s);if(im&&!im.getAttribute('src'))im.src=IMG(p)});
+document.querySelectorAll('[data-reveal]').forEach(e=>e.classList.add('visible'));
 }
-const run=()=>{apply();setTimeout(apply,1000);setTimeout(apply,3000);setTimeout(apply,7000)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
+const run=()=>{apply();setTimeout(apply,1000);setTimeout(apply,3000)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 })();
