@@ -8,6 +8,11 @@
   directory = "netlify/functions"
 
 [[redirects]]
+  from = "/supabase/*"
+  to = "/.netlify/functions/supabase-proxy/:splat"
+  status = 200
+
+[[redirects]]
   from = "/media/*"
   to = "/.netlify/functions/media-proxy/media/:splat"
   status = 200
