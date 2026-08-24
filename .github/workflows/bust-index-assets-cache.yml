@@ -14,15 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Refresh asset URLs in index
+      - name: Make public index independent of blocked third-party font CDN
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
-          s = p.read_text()
+          s = p.read_text(encoding='utf-8')
+          lines = s.splitlines()
+          lines = [line for line in lines if 'fonts.googleapis.com' not in line and 'fonts.gstatic.com' not in line]
+          s = '\n'.join(lines) + ('\n' if s.endswith('\n') else '')
           s = s.replace('assets/site-content-loader.js?v=20260817-2', 'assets/site-content-loader.js?v=20260823-4')
           s = s.replace('assets/order-flow.js?v=20260815-2', 'assets/order-flow.js?v=20260823-4')
-          p.write_text(s)
+          p.write_text(s, encoding='utf-8')
           PY
       - name: Commit cache-busted index
         run: |
@@ -30,5 +33,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'Bust cached index asset URLs [cache-busted]'
+          git commit -m 'Make production index independent of third-party font CDN [cache-busted]'
           git push
