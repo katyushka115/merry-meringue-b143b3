@@ -20,8 +20,9 @@ jobs:
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text()
-          s = s.replace('assets/site-content-loader.js?v=20260817-2', 'assets/site-content-loader.js?v=20260823-4')
-          s = s.replace('assets/order-flow.js?v=20260815-2', 'assets/order-flow.js?v=20260823-4')
+          import re
+          s = re.sub(r'assets/site-content-loader\.js\?v=[^\"\']+', 'assets/site-content-loader.js?v=20260824-2', s)
+          s = re.sub(r'assets/order-flow\.js\?v=[^\"\']+', 'assets/order-flow.js?v=20260824-2', s)
           p.write_text(s)
           PY
       - name: Commit cache-busted index
