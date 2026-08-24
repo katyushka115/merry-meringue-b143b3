@@ -10,7 +10,9 @@ Object.entries(M).forEach(([s,v])=>text(s,v));
 ['Отбираем цветы вручную и работаем только с теми, чья свежесть не вызывает сомнений.','Не копируем букеты один в один — сохраняем настроение, но создаём уникальную композицию.','Бережно доставляем по Москве и ближайшему Подмосковью ежедневно с 10:00 до 24:00.','Покажем готовый букет до передачи курьеру, чтобы вы были уверены в каждой детали.'].forEach((v,i)=>text(`.value-item:nth-child(${i+1}) p`,v));
 const sig=document.querySelector('.signature');if(sig)sig.innerHTML='С любовью, SM <span aria-hidden="true">❤️</span>';
 document.querySelectorAll('a').forEach(a=>{const q=((a.getAttribute('href')||'')+' '+a.textContent).toLowerCase();if(q.includes('instagram')){a.href=IG;a.target='_blank';a.rel='noopener noreferrer'}if(q.includes('telegram')||q.includes('t.me')){a.href=TG;a.target='_blank';a.rel='noopener noreferrer'}});
-const studio=document.querySelector('.footer-column:nth-child(4)');if(studio){studio.querySelectorAll('.sm-studio-route-link').forEach(x=>x.remove());const a=document.createElement('a');a.className='sm-studio-route-link';a.href=MAP;a.target='_blank';a.rel='noopener noreferrer';a.textContent='📍 Построить маршрут →';const h=[...studio.children].find(e=>(e.textContent||'').includes('Круглосуточно'));if(h)studio.insertBefore(a,h);else studio.appendChild(a)}
+const studio=document.querySelector('.footer-column:nth-child(4)');
+document.querySelectorAll('a[href*="yandex.ru/maps"],a[href*="yandex.com/maps"],.sm-studio-route-link').forEach(x=>x.remove());
+if(studio){const a=document.createElement('a');a.className='sm-studio-route-link';a.href=MAP;a.target='_blank';a.rel='noopener noreferrer';a.textContent='📍 Построить маршрут →';const h=[...studio.children].find(e=>(e.textContent||'').includes('Круглосуточно'));if(h)studio.insertBefore(a,h);else studio.appendChild(a)}
 [['.hero-visual img','hero.jpg'],['.statement-art img','custom.jpg'],['.final-art img','final.jpg']].forEach(([s,p])=>{const im=document.querySelector(s);if(im&&!im.getAttribute('src'))im.src=IMG(p)});
 document.querySelectorAll('[data-reveal]').forEach(e=>e.classList.add('visible'));
 }
