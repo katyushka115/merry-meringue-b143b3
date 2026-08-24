@@ -1,6 +1,4 @@
-import type { Config, Context } from "@netlify/edge-functions";
-
-export default async (_req: Request, context: Context) => {
+export default async (_req, context) => {
   const response = await context.next();
   const type = response.headers.get("content-type") || "";
   if (!type.includes("text/html")) return response;
@@ -19,7 +17,7 @@ export default async (_req: Request, context: Context) => {
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 };
 
-export const config: Config = {
+export const config = {
   path: "/",
   onError: "bypass"
 };
