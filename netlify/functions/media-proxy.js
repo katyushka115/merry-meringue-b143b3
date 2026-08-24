@@ -4,7 +4,6 @@ const SUPABASE_ORIGINS = [
 ];
 const BUCKET = 'bouquets';
 const MARKER = '/.netlify/functions/media-proxy';
-
 const FIXED = {
   '/media/hero.jpg': 'site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg',
   '/media/collection-1.jpg': 'collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg',
@@ -17,50 +16,34 @@ const FIXED = {
   '/media/life-4.jpg': 'site-media/2e58be79-a7b9-4702-8467-3891417abe42.jpeg',
   '/media/final.jpg': 'site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg'
 };
-
 const validPath = value => /^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(value) && !value.includes('..');
-
 export default async (req) => {
   const incoming = new URL(req.url);
   let pathname = incoming.pathname;
   if (pathname.startsWith(MARKER)) pathname = `/media${pathname.slice(MARKER.length)}`;
-  if (pathname === '/.netlify/functions/media-proxy') pathname = incoming.searchParams.get('path') || '';
-
+  if (pathname === '/.netlify/functions/media-proxy') pathname = incoming.searchParams.get('path') ? `/${incoming.searchParams.get('path').replace(/^\/+/, '')}` : '';
   let objectPath = FIXED[pathname] || '';
-
-  if (pathname.startsWith('/media/product/')) {
-    const path = pathname.slice('/media/product/'.length);
-    if (!validPath(path)) return new Response('Bad image path', { status: 400 });
-    objectPath = path.startsWith('products/') ? path : path;
+  if (!objectPath && pathname.startsWith('/media/')) {
+    const candidate = pathname.slice('/media/'.length);
+    if (validPath(candidate)) objectPath = candidate;
   }
-
   if (!objectPath) return new Response('Not found', { status: 404 });
   if (!validPath(objectPath)) return new Response('Bad image path', { status: 400 });
-
-  let response = null;
-  let lastError = null;
+  let response = null; let lastError = null;
   for (const origin of SUPABASE_ORIGINS) {
     try {
-      response = await fetch(
-        `${origin}/storage/v1/object/public/${BUCKET}/${objectPath}`,
-        { redirect: 'follow', headers: { Accept: 'image/avif,image/webp,image/jpeg,image/png,*/*' } }
-      );
+      response = await fetch(`${origin}/storage/v1/object/public/${BUCKET}/${objectPath}`, { redirect: 'follow', headers: { Accept: 'image/avif,image/webp,image/jpeg,image/png,*/*' } });
       if (response.ok) break;
       lastError = new Error(`upstream ${response.status}`);
-    } catch (error) {
-      lastError = error;
-    }
+    } catch (error) { lastError = error; }
   }
-
   if (!response?.ok) {
     console.error('media-proxy upstream failure', pathname, objectPath, lastError?.message || 'unknown');
     return new Response('Image not found', { status: response?.status >= 400 ? response.status : 502 });
   }
-
   const headers = new Headers(response.headers);
   headers.set('Content-Type', response.headers.get('content-type') || 'image/jpeg');
   headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
   headers.set('X-Content-Type-Options', 'nosniff');
-
   return new Response(response.body, { status: 200, headers });
 };
