@@ -6,7 +6,7 @@ const BUCKET = 'bouquets';
 const MARKER = '/.netlify/functions/media-proxy';
 
 const FIXED = {
-  '/media/hero.jpg': 'hero/e4614aa5-93a8-4000-b27b-7f2f77871b82.jpeg',
+  '/media/hero.jpg': 'site-media/e78c8f30-9f27-425f-8ac7-d53eef9dbbb6.jpeg',
   '/media/collection-1.jpg': 'collections/fdd4c98a-66dc-4b88-88e3-9266f1a2ddd5.jpeg',
   '/media/collection-2.jpg': 'collections/81b226c1-8f99-41a3-a060-f95cadc16431.jpeg',
   '/media/collection-3.jpg': 'collections/ddf86b0f-28be-47cd-9df9-b4fb27650ba4.jpeg',
@@ -29,12 +29,14 @@ export default async (req) => {
   let objectPath = FIXED[pathname] || '';
 
   if (pathname.startsWith('/media/product/')) {
-    const path = pathname.slice('/media/product/'.length);
+    let path = pathname.slice('/media/product/'.length);
+    if (path.startsWith('products/')) path = path.slice('products/'.length);
     if (!validPath(path)) return new Response('Bad image path', { status: 400 });
-    objectPath = path;
+    objectPath = path.startsWith('products/') ? path : path;
   }
 
   if (!objectPath) return new Response('Not found', { status: 404 });
+  if (!validPath(objectPath)) return new Response('Bad image path', { status: 400 });
 
   let response = null;
   let lastError = null;
