@@ -1,10 +1,11 @@
 const SUPABASE_ORIGIN = 'https://avlozhwwvjqiypifoxox.supabase.co';
 const BUCKET = 'bouquets';
+const normalizePath = value => decodeURIComponent(value).replace(/^\/+/, '').replace(/^product\//i, '');
 
 export default async (req) => {
   const url = new URL(req.url);
   const rawPath = url.searchParams.get('path') || '';
-  const path = decodeURIComponent(rawPath).replace(/^\/+/, '');
+  const path = normalizePath(rawPath);
 
   if (!path || path.includes('..') || !/^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(path)) {
     return new Response('Bad image path', { status: 400 });
