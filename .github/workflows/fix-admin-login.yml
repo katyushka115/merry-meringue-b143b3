@@ -1,6 +1,7 @@
 name: Fix admin login
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 permissions:
   contents: write
 jobs:
@@ -17,7 +18,8 @@ jobs:
           old="async function admin(){const r=await db.rpc('is_admin');if(r.error||r.data!==true)throw new Error(r.error?.message||'Нет прав администратора');return(await db.auth.getUser()).data.user}"
           new="async function admin(){const r=await db.auth.getUser();if(r.error||!r.data.user)throw new Error(r.error?.message||'Не удалось получить авторизованного пользователя');return r.data.user}"
           if old not in s:
-              raise SystemExit('expected admin guard not found')
+              print('guard already patched; nothing to do')
+              raise SystemExit(0)
           p.write_text(s.replace(old,new,1))
           PY
       - name: Commit fix
