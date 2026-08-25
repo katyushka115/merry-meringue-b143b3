@@ -1,0 +1,47 @@
+name: Fix public site routing and Supabase bootstrap
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix redirects and Supabase bootstrap
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('_redirects')
+          p.write_text('''/supabase/* /.netlify/functions/supabase-proxy/:splat 200\n/media/* /.netlify/functions/media-proxy/:splat 200\n/admin /admin-panel.html 200\n/admin/ /admin-panel.html 200\n/admin/editor /admin-panel.html 200\n/admin-fixed.html /admin-panel.html 200\n/assets/bouquet-1.svg /media/collection-1.jpg 200\n/assets/bouquet-2.svg /media/collection-2.jpg 200\n/assets/bouquet-3.svg /media/custom.jpg 200\n/assets/bouquet-4.svg /media/life-1.jpg 200\n/assets/bouquet-5.svg /media/collection-3.jpg 200\n/assets/bouquet-6.svg /media/hero.jpg 200\n''', encoding='utf-8')
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          tag = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>'
+          if tag not in s:
+              s = s.replace('</head>', '  ' + tag + '\n</head>', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate
+        run: |
+          test -f index.html
+          test -f _redirects
+          grep -F '/media/* /.netlify/functions/media-proxy/:splat 200' _redirects
+          grep -F 'cdn.jsdelivr.net/npm/@supabase/supabase-js@2' index.html
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html _redirects
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix public site bootstrap and media redirects'
+          git push
+      - name: Remove workflow
+        if: always()
+        run: |
+          rm -f .github/workflows/fix-public-site.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u .github/workflows/fix-public-site.yml
+          git diff --cached --quiet || (git commit -m 'Remove temporary site fix workflow' && git push)
