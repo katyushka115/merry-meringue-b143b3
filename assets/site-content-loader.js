@@ -2,8 +2,27 @@
 (()=>{
   const API='/supabase', MEDIA='/media', BUCKET='bouquets';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const json=async p=>{const r=await fetch(API+p,{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json()};
-  const mediaUrl=u=>{if(!u)return'';if(u.startsWith('/media/'))return u;try{const x=new URL(u),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);return i>=0?MEDIA+'/'+x.pathname.slice(i+needle.length):u}catch{return u}};
+  const normalizeMediaPath=p=>String(p||'').replace(/^\/+/, '').replace(/^product\//i,'');
+  const mediaUrl=u=>{
+    if(!u)return'';
+    if(u.startsWith('/media/'))return u.replace('/media/product/','/media/');
+    try{
+      const x=new URL(u),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);
+      return i>=0?MEDIA+'/'+normalizeMediaPath(x.pathname.slice(i+needle.length)):u;
+    }catch{return u}
+  };
+  const json=async p=>{
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        const r=await fetch(API+p,{headers:{Accept:'application/json'},cache:'no-store'});
+        if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);
+        return r.json();
+      }catch(error){
+        if(attempt===2)throw error;
+        await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));
+      }
+    }
+  };
   const setText=(selector,value)=>{const e=document.querySelector(selector);if(e&&value!=null)e.textContent=value};
   const textMap={'Главная':[['.hero-copy .eyebrow','hero_eyebrow'],['#hero-title','hero_title'],['.hero-description p','hero_description'],['.hero-actions .button','hero_primary_button'],['.hero-actions .text-link','hero_secondary_button']], 'О студии':[['.intro .eyebrow','about_eyebrow'],['.intro .section-title','about_title'],['.intro-text p','about_text'],['.intro-text .text-link','about_link'],['.signature','about_signature']], 'Коллекции':[['.collections .section-heading .eyebrow','collections_eyebrow'],['#collections-title','collections_title'],['.section-heading a.text-link','collections_link']], 'На заказ':[['.statement-copy .eyebrow','custom_eyebrow'],['#custom-title','custom_title'],['.statement-copy p','custom_text'],['.statement-copy .text-link','custom_link']], 'Букеты':[['.products .section-heading .eyebrow','bouquets_eyebrow'],['#products-title','bouquets_title'],['.products .section-heading > p','bouquets_note']], 'Философия':[['.values-intro .eyebrow','values_eyebrow'],['#values-title','values_title'],['.values-intro > p:last-child','values_intro']], 'Жизнь студии':[['.gallery .section-heading .eyebrow','life_eyebrow'],['.gallery .section-heading .text-link','life_instagram_button']], 'Финальный блок':[['.final-copy .eyebrow','final_eyebrow'],['#final-title','final_title'],['.final-copy > p','final_text'],['.final-actions .button','final_call_button'],['.final-actions .button--outline','final_telegram_button']], 'Контакты':[['.footer-brand','footer_brand'],['.footer-column:nth-child(2) h3','footer_nav_title'],['.footer-column:nth-child(3) h3','footer_contacts_title'],['.footer-column:nth-child(4) h3','footer_studio_title'],['.footer-column:nth-child(4) p:first-of-type','studio_address'],['.footer-column:nth-child(4) p:last-of-type','studio_hours'],['.footer-bottom span:first-child','footer_copyright'],['.footer-bottom span:last-child','footer_tagline']]};
   const mediaKey=slot=>({hero:'hero',custom:'custom_art',final:'final_art'}[slot]||slot);
