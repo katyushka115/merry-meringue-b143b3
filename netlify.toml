@@ -14,7 +14,7 @@
 
 [[redirects]]
   from = "/media/*"
-  to = "/.netlify/functions/media-proxy/media/:splat"
+  to = "/.netlify/functions/media-proxy/:splat"
   status = 200
 
 [[redirects]]
