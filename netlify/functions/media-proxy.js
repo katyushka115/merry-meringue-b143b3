@@ -16,6 +16,10 @@ const FIXED = {
   '/media/final.jpg': 'site-media/870dbd10-0776-463b-8474-af91c6bb648e.jpeg'
 };
 const validPath = value => /^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(value) && !value.includes('..');
+const normalizePath = value => value
+  .replace(/^\/+/, '')
+  .replace(/^product\//i, '')
+  .replace(/^products\//i, 'products/');
 
 exports.handler = async (event) => {
   const incoming = new URL(event.rawUrl || `https://${event.headers?.host || 'localhost'}${event.path || '/'}`);
@@ -26,7 +30,7 @@ exports.handler = async (event) => {
 
   let objectPath = FIXED[pathname] || '';
   if (!objectPath && pathname.startsWith('/media/')) {
-    const candidate = pathname.slice('/media/'.length);
+    const candidate = normalizePath(pathname.slice('/media/'.length));
     if (validPath(candidate)) objectPath = candidate;
   }
   if (!objectPath) return { statusCode: 404, body: 'Not found' };
