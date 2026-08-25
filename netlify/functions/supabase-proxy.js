@@ -13,10 +13,14 @@ exports.handler = async (event) => {
   const headers=new Headers();
   headers.set('apikey',PUBLIC_KEY);
   const auth=event.headers?.authorization||event.headers?.Authorization;
-  headers.set('Authorization',auth||`Bearer ${PUBLIC_KEY}`);
+  if(auth) headers.set('Authorization',auth);
+  else if(path.startsWith('/auth/v1/')) headers.set('Authorization',`Bearer ${PUBLIC_KEY}`);
+  else headers.set('Authorization',`Bearer ${PUBLIC_KEY}`);
   for(const h of ['content-type','x-client-info','x-supabase-api-version']) if(event.headers?.[h]) headers.set(h,event.headers[h]);
   try{
     const response=await fetch(`${SUPABASE_ORIGIN}${path}${incoming.search}`,{method:event.httpMethod,headers,body:['GET','HEAD'].includes(event.httpMethod)?undefined:event.isBase64Encoded?Buffer.from(event.body||'','base64'):event.body,redirect:'follow'});
-    return {statusCode:response.status,headers:{'Content-Type':response.headers.get('content-type')||'application/json','Cache-Control':'no-store, max-age=0','X-Content-Type-Options':'nosniff',...corsHeaders},body:await response.text()};
-  }catch(error){console.error('supabase-proxy upstream failure',path,error);return {statusCode:502,headers:corsHeaders,body:'Supabase upstream unavailable'}}
+    const responseHeaders={...corsHeaders,'Content-Type':response.headers.get('content-type')||'application/json','Cache-Control':'no-store, max-age=0','X-Content-Type-Options':'nosniff'};
+    for(const h of ['content-range','x-total-count','set-cookie']){const v=response.headers.get(h);if(v)responseHeaders[h]=v}
+    return {statusCode:response.status,headers:responseHeaders,body:await response.text()};
+  }catch(error){console.error('supabase-proxy upstream failure',path,error);return {statusCode:502,headers:corsHeaders,body:JSON.stringify({error:'Supabase upstream unavailable'})}}
 };
