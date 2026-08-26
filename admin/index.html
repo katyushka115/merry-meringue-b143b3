@@ -17,9 +17,8 @@ html,body{margin:0;height:100%;background:#f5f1eb}
   frame.addEventListener('load',function(){
     try{
       const doc=frame.contentDocument;
-      if(!doc||doc.getElementById('sm-admin-layout-fix'))return;
+      if(!doc)return;
       const style=doc.createElement('style');
-      style.id='sm-admin-layout-fix';
       style.textContent=`
         .site-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important}
         .site-tile{cursor:pointer!important;box-sizing:border-box!important}
