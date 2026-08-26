@@ -28,6 +28,7 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+          cname: smflowers.ru
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
