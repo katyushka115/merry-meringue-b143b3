@@ -1,1 +1,126 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=../admin-panel.html"><title>SM Flowers — админка</title><script>location.replace('../admin-panel.html');</script></head><body><a href="../admin-panel.html">Открыть админку</a></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SM Flowers — админка</title>
+<style>html,body{margin:0;height:100%;background:#f5f1eb}#adminFrame{display:block;width:100%;height:100vh;border:0}</style>
+</head>
+<body>
+<iframe id="adminFrame" src="../admin-panel.html" title="SM Flowers — админка"></iframe>
+<script>
+(function(){
+  const frame=document.getElementById('adminFrame');
+  const DB_URL='https://avlozhwwvjqiypifoxox.supabase.co';
+  const KEY='sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
+  const BUCKET='bouquets';
+  const labels={
+    'Главная':'Главная',
+    'О студии':'О студии',
+    'Коллекции':'Выберите настроение (коллекции)',
+    'На заказ':'Ваша идея',
+    'Букеты':'Букеты недели',
+    'Философия':'Почему SM Flowers',
+    'Жизнь студии':'Жизнь студии',
+    'Финальный блок':'Наш язык цветов',
+    'Контакты':'Контакты',
+    'Навигация':'Навигация'
+  };
+  const icons={
+    'Главная':'⌂','О студии':'✦','Коллекции':'❀','На заказ':'✎','Букеты':'✿',
+    'Философия':'♡','Жизнь студии':'◎','Финальный блок':'☼','Контакты':'⌖','Навигация':'↗'
+  };
+  const order=['Главная','О студии','Коллекции','На заказ','Букеты','Философия','Жизнь студии','Финальный блок','Контакты','Навигация'];
+  let db=null, active=null, content=[], media=[];
+  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function mediaUrl(u){
+    if(!u)return '';
+    const v=String(u);
+    if(v.startsWith('/media/'))return DB_URL+'/storage/v1/render/image/public/'+BUCKET+'/'+v.slice(7);
+    try{
+      const x=new URL(v), n='/storage/v1/object/public/'+BUCKET+'/', i=x.pathname.indexOf(n);
+      return i>=0?DB_URL+'/storage/v1/render/image/public/'+BUCKET+'/'+x.pathname.slice(i+n.length):v;
+    }catch{return v}
+  }
+  async function upload(file){
+    const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+    const path='site-media/'+crypto.randomUUID()+'.'+ext;
+    const r=await db.storage.from(BUCKET).upload(path,file,{contentType:file.type,upsert:false});
+    if(r.error)throw r.error;
+    return DB_URL+'/storage/v1/render/image/public/'+BUCKET+'/'+path;
+  }
+  function css(doc){
+    if(doc.getElementById('sm-editor-fix'))return;
+    const s=doc.createElement('style');s.id='sm-editor-fix';s.textContent=`
+      #site.sm-fixed-editor .site-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;margin-top:18px!important}
+      #site.sm-fixed-editor .site-tile{min-height:94px!important;padding:16px!important;border:1px solid #ded7ce!important;border-radius:16px!important;background:#fff!important;text-align:left!important;color:#20251f!important;display:flex!important;flex-direction:column!important;justify-content:space-between!important;cursor:pointer!important;box-sizing:border-box!important}
+      #site.sm-fixed-editor .site-tile.active{background:#263125!important;color:#fff!important;border-color:#263125!important}
+      #site.sm-fixed-editor .sm-editor-panel{margin-top:18px;padding:20px;border-top:1px solid #e8e1d8;background:#fff;border-radius:14px}
+      #site.sm-fixed-editor .sm-editor-panel h3{margin:0 0 16px;font-family:Georgia,serif;font-size:26px;font-weight:400}
+      #site.sm-fixed-editor .sm-field{padding:14px 0;border-top:1px solid #eee}
+      #site.sm-fixed-editor .sm-field textarea,#site.sm-fixed-editor .sm-field input[type=text],#site.sm-fixed-editor .sm-field input[type=url]{width:100%;box-sizing:border-box;padding:10px;margin:7px 0 10px;border:1px solid #ddd5cb;border-radius:9px;font:inherit}
+      #site.sm-fixed-editor .sm-photo{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+      #site.sm-fixed-editor .sm-photo img{width:190px;height:145px;object-fit:cover;border-radius:10px;background:#eee}
+      #site.sm-fixed-editor .sm-save{padding:9px 13px;border:0;border-radius:9px;background:#263125;color:#fff;cursor:pointer}
+      #site.sm-fixed-editor .sm-close{padding:9px 13px;border:0;border-radius:9px;background:#eee9e1;color:#222;cursor:pointer}
+      #site.sm-fixed-editor .sm-muted{color:#687064}
+      @media(max-width:800px){#site.sm-fixed-editor .site-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}#site.sm-fixed-editor .site-tile{min-height:76px!important;padding:10px!important;border-radius:11px!important;font-size:12px!important}#site.sm-fixed-editor .site-tile .icon{font-size:18px!important}#site.sm-fixed-editor .sm-editor-panel{padding:14px}}
+      @media(max-width:420px){#site.sm-fixed-editor .site-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.wrap{padding:0 10px!important}}
+    `;doc.head.appendChild(s);
+  }
+  async function initEditor(doc){
+    if(!window.supabase)return;
+    if(!db)db=window.supabase.createClient(DB_URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+    const site=doc.getElementById('site');
+    if(!site)return;
+    site.classList.add('sm-fixed-editor');
+    let grid=doc.getElementById('siteGrid');
+    if(!grid){grid=doc.createElement('div');grid.id='siteGrid';grid.className='site-grid';site.appendChild(grid)}
+    let panel=doc.getElementById('siteEditor');
+    if(!panel){panel=doc.createElement('div');panel.id='siteEditor';site.appendChild(panel)}
+    panel.className='sm-editor-panel';
+    panel.classList.add('hidden');
+    await reload();
+    grid.onclick=e=>{const b=e.target.closest('[data-sm-block]');if(b){e.preventDefault();open(b.dataset.smBlock)}};
+    site.addEventListener('click',e=>{const b=e.target.closest('#closeSmEditor');if(b){active=null;panel.classList.add('hidden');paintGrid();}},true);
+  }
+  async function reload(){
+    const [t,m]=await Promise.all([db.from('site_content').select('*').order('sort_order').order('id'),db.from('site_media').select('*').order('sort_order').order('id')]);
+    if(t.error)throw t.error;if(m.error)throw m.error;content=t.data||[];media=m.data||[];paintGrid();if(active)paintPanel(active);
+  }
+  function paintGrid(){
+    const doc=frame.contentDocument,grid=doc.getElementById('siteGrid');if(!grid)return;
+    const present=[...new Set([...content.map(x=>x.section),...media.map(x=>x.section)])];
+    const sections=[...order.filter(x=>present.includes(x)),...present.filter(x=>!order.includes(x))];
+    grid.innerHTML=sections.map(s=>`<button type="button" class="site-tile ${active===s?'active':''}" data-sm-block="${esc(s)}"><span class="icon">${icons[s]||'□'}</span><strong>${esc(labels[s]||s)}</strong><small>${active===s?'Открыт':'Открыть блок'}</small></button>`).join('');
+  }
+  function paintPanel(s){
+    const doc=frame.contentDocument,p=doc.getElementById('siteEditor');if(!p)return;
+    const ts=content.filter(x=>x.section===s),ms=media.filter(x=>x.section===s);
+    p.classList.remove('hidden');
+    p.innerHTML=`<div class="actions"><h3>${esc(labels[s]||s)}</h3><button id="closeSmEditor" class="sm-close" type="button">Закрыть</button></div><p class="sm-muted">Изменения сохраняются напрямую в Supabase и не требуют нового деплоя сайта.</p><h4>Тексты</h4>${ts.length?ts.map(x=>`<div class="sm-field"><b>${esc(x.label||x.content_key)}</b><div class="sm-muted">${esc(x.content_key)}</div><textarea data-sm-text="${x.id}" rows="4">${esc(x.content||'')}</textarea><label><input type="checkbox" data-sm-vis="${x.id}" ${x.is_visible!==false?'checked':''} style="width:auto"> Показывать</label><br><button type="button" class="sm-save" data-sm-save="${x.id}">Сохранить</button></div>`).join(''):'<p class="sm-muted">Текстов пока нет.</p>'}<h4>Фотографии</h4>${ms.length?ms.map(x=>`<div class="sm-field sm-photo"><img src="${esc(mediaUrl(x.image_url))}" alt="${esc(x.alt_text||'')}"><div style="flex:1;min-width:230px"><b>${esc(x.label||x.slot_key)}</b><input type="text" data-sm-alt="${x.id}" value="${esc(x.alt_text||'')}" placeholder="Alt-текст"><input type="file" accept="image/*" data-sm-file="${x.id}"><label><input type="checkbox" data-sm-mvis="${x.id}" ${x.is_visible!==false?'checked':''} style="width:auto"> Показывать</label><br><button type="button" class="sm-save" data-sm-msave="${x.id}">Сохранить фото</button></div></div>`).join(''):'<p class="sm-muted">Фотографий пока нет.</p>'}<div class="sm-field"><b>Добавить фотографию</b><input id="smNewLabel" type="text" placeholder="Название фотографии"><input id="smNewFile" type="file" accept="image/*"><button type="button" class="sm-save" id="smAddPhoto">Добавить фото</button></div>`;
+    p.querySelectorAll('[data-sm-save]').forEach(b=>b.onclick=async()=>{try{const id=b.dataset.smSave,r=await db.from('site_content').update({content:p.querySelector(`[data-sm-text="${id}"]`).value,is_visible:p.querySelector(`[data-sm-vis="${id}"]`).checked,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;b.textContent='Сохранено';await reload()}catch(e){alert(e.message)}});
+    p.querySelectorAll('[data-sm-msave]').forEach(b=>b.onclick=async()=>{try{const id=b.dataset.smMsave,f=p.querySelector(`[data-sm-file="${id}"]`).files[0],patch={alt_text:p.querySelector(`[data-sm-alt="${id}"]`).value,is_visible:p.querySelector(`[data-sm-mvis="${id}"]`).checked,updated_at:new Date().toISOString()};if(f)patch.image_url=await upload(f);const r=await db.from('site_media').update(patch).eq('id',id);if(r.error)throw r.error;b.textContent='Сохранено';await reload()}catch(e){alert(e.message)}});
+    const add=p.getElementById('smAddPhoto');if(add)add.onclick=async()=>{try{const f=p.getElementById('smNewFile').files[0];if(!f)return alert('Выберите фото');const url=await upload(f);const max=media.filter(x=>x.section===s).reduce((a,x)=>Math.max(a,Number(x.sort_order||0)),0);const r=await db.from('site_media').insert({section:s,slot_key:'photo-'+crypto.randomUUID(),label:p.getElementById('smNewLabel').value.trim()||'Новое фото',image_url:url,sort_order:max+1,is_visible:true});if(r.error)throw r.error;await reload()}catch(e){alert(e.message)}};
+  }
+  function open(s){active=s;const doc=frame.contentDocument;paintGrid();paintPanel(s);const site=doc.getElementById('site');if(site){doc.querySelectorAll('.panel').forEach(x=>x.classList.add('hidden'));site.classList.remove('hidden');doc.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('active'));const tab=doc.querySelector('[data-tab="site"]');if(tab)tab.classList.add('active')}}
+  function patch(doc){
+    css(doc);
+    const tab=doc.querySelector('[data-tab="site"]');
+    if(tab&&!tab.dataset.smPatched){
+      tab.dataset.smPatched='1';
+      tab.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();openSiteTab(doc)},true);
+    }
+    initEditor(doc).catch(err=>console.error('SM editor init',err));
+  }
+  async function openSiteTab(doc){
+    const site=doc.getElementById('site');if(!site)return;
+    doc.querySelectorAll('.panel').forEach(x=>x.classList.add('hidden'));site.classList.remove('hidden');
+    doc.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('active'));const tab=doc.querySelector('[data-tab="site"]');if(tab)tab.classList.add('active');
+    try{await reload()}catch(e){console.error(e);const p=doc.getElementById('siteEditor');if(p){p.classList.remove('hidden');p.innerHTML='<p style="color:#a83d35">Не удалось загрузить редактор: '+esc(e.message)+'</p>'}}
+  }
+  frame.addEventListener('load',()=>{const doc=frame.contentDocument;let tries=0;const timer=setInterval(()=>{tries++;if(doc&&doc.querySelector('[data-tab="site"]')){clearInterval(timer);patch(doc)}if(tries>40)clearInterval(timer)},250)});
+})();
+</script>
+</body>
+</html>
