@@ -1,15 +1,21 @@
-/* Live site content: editable text/media/products from Supabase through same-origin proxy. */
+/* Live site content: editable text/media/products from Supabase. */
 (()=>{
-  const API='/supabase', MEDIA='/media', BUCKET='bouquets';
+  const API='/supabase', SUPABASE_ORIGIN='https://avlozhwwvjqiypifoxox.supabase.co', BUCKET='bouquets';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const normalizeMediaPath=p=>String(p||'').replace(/^\/+/, '').replace(/^product\//i,'');
   const mediaUrl=u=>{
     if(!u)return'';
-    if(u.startsWith('/media/'))return u.replace('/media/product/','/media/');
+    const value=String(u).trim();
+    if(value.startsWith('/media/')){
+      const path=value.slice('/media/'.length).replace(/^product\//i,'');
+      if(/^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(path) && !path.includes('..')){
+        return `${SUPABASE_ORIGIN}/storage/v1/object/public/${BUCKET}/${path}`;
+      }
+      return value;
+    }
     try{
-      const x=new URL(u),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);
-      return i>=0?MEDIA+'/'+normalizeMediaPath(x.pathname.slice(i+needle.length)):u;
-    }catch{return u}
+      const x=new URL(value),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);
+      return i>=0?`${SUPABASE_ORIGIN}/storage/v1/object/public/${BUCKET}/${x.pathname.slice(i+needle.length)}${x.search||''}`:value;
+    }catch{return value}
   };
   const json=async p=>{
     for(let attempt=0;attempt<3;attempt++){
@@ -38,12 +44,18 @@
     const products=results[2].status==='fulfilled'?results[2].value:[];
     for(const row of texts)for(const [selector,key] of(textMap[row.section]||[]))if(row.content_key===key)setText(selector,row.content);
     const by=(section,slot)=>media.find(x=>x.section===section&&x.slot_key===mediaKey(slot))?.image_url;
-    const setImg=(selector,url)=>{const e=document.querySelector(selector);if(e&&url)e.src=mediaUrl(url)};
+    const setImg=(selector,url)=>{const e=document.querySelector(selector);if(e&&url){e.src=mediaUrl(url);if(e.dataset)e.dataset.liveImage='1'}};
     setImg('.hero-visual img',by('Главная','hero'));setImg('.statement-art img',by('На заказ','custom'));setImg('.final-art img',by('Финальный блок','final'));
     document.querySelectorAll('.collection-card img').forEach((e,i)=>{const u=by('Коллекции',`collection_${i+1}`);if(u)e.src=mediaUrl(u)});
     document.querySelectorAll('.gallery-item img').forEach((e,i)=>{const u=by('Жизнь студии',`life_photo_${i+1}`)||by('Жизнь студии',`gallery_photo_${i+1}`);if(u)e.src=mediaUrl(u)});
     const g=document.getElementById('product-grid');
-    if(g&&products.length){g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}">Заказать</button></div></article>`).join('');g.querySelectorAll('[data-bouquet]').forEach(b=>b.addEventListener('click',()=>{const selected=document.getElementById('selected-bouquet'),modal=document.getElementById('order-modal');if(selected)selected.textContent=`Вы выбрали: «${b.dataset.bouquet}»`;modal?.classList.add('open');document.body.classList.add('modal-open')}));}
+    if(g){
+      if(!products.length)g.innerHTML='';
+      else{
+        g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager" decoding="async"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}">Заказать</button></div></article>`).join('');
+        g.querySelectorAll('[data-bouquet]').forEach(b=>b.addEventListener('click',()=>{const selected=document.getElementById('selected-bouquet'),modal=document.getElementById('order-modal');if(selected)selected.textContent=`Вы выбрали: «${b.dataset.bouquet}»`;modal?.classList.add('open');document.body.classList.add('modal-open')}));
+      }
+    }
     fixRouteLink();
     document.querySelectorAll('[data-reveal]').forEach(e=>e.classList.add('visible'));
   }
