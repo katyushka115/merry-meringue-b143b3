@@ -29,6 +29,18 @@ jobs:
         with:
           enablement: true
 
+      - name: Prepare admin collection manager
+        run: python3 - <<'PY'
+          from pathlib import Path
+          p=Path('admin/index.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="../assets/admin-collections.js?v=20260826-1"></script>'
+          if 'admin-collections.js' not in s:
+              s=s.replace('</body>',tag+'</body>')
+              p.write_text(s,encoding='utf-8')
+          print('admin collection manager injected')
+          PY
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
         with:
