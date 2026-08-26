@@ -1,4 +1,4 @@
-/* Live site content: editable text/media/products from Supabase. */
+/* Live site content: editable text/media from Supabase. Product catalog is loaded by index.html. */
 (()=>{
   const SUPABASE_ORIGIN='https://avlozhwwvjqiypifoxox.supabase.co';
   const SUPABASE_KEY='sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
@@ -39,26 +39,16 @@
   async function run(){
     const results=await Promise.allSettled([
       json('/site_content?select=section,content_key,content,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc'),
-      json('/site_media?select=section,slot_key,image_url,alt_text,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc'),
-      json('/products?select=id,name,description,price,image_url,is_active,is_featured,sort_order&is_active=eq.true&order=sort_order.asc,id.asc')
+      json('/site_media?select=section,slot_key,image_url,alt_text,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc')
     ]);
     const texts=results[0].status==='fulfilled'?results[0].value:[];
     const media=results[1].status==='fulfilled'?results[1].value:[];
-    const products=results[2].status==='fulfilled'?results[2].value:[];
     for(const row of texts)for(const [selector,key] of(textMap[row.section]||[]))if(row.content_key===key)setText(selector,row.content);
     const by=(section,slot)=>media.find(x=>x.section===section&&x.slot_key===mediaKey(slot))?.image_url;
-    const setImg=(selector,url)=>{const e=document.querySelector(selector);if(e&&url){e.src=mediaUrl(url);if(e.dataset)e.dataset.liveImage='1'}};
+    const setImg=(selector,url)=>{const e=document.querySelector(selector);if(e&&url){e.src=mediaUrl(url);e.dataset.liveImage='1'}};
     setImg('.hero-visual img',by('Главная','hero'));setImg('.statement-art img',by('На заказ','custom'));setImg('.final-art img',by('Финальный блок','final'));
     document.querySelectorAll('.collection-card img').forEach((e,i)=>{const u=by('Коллекции',`collection_${i+1}`);if(u)e.src=mediaUrl(u)});
     document.querySelectorAll('.gallery-item img').forEach((e,i)=>{const u=by('Жизнь студии',`life_photo_${i+1}`)||by('Жизнь студии',`gallery_photo_${i+1}`);if(u)e.src=mediaUrl(u)});
-    const g=document.getElementById('product-grid');
-    if(g){
-      if(!products.length)g.innerHTML='';
-      else{
-        g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager" decoding="async"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}" data-product-id="${p.id}" data-product-name="${esc(p.name)}" data-product-price="${Number(p.price||0)}">Заказать</button></div></article>`).join('');
-        g.querySelectorAll('[data-bouquet]').forEach(b=>b.addEventListener('click',()=>{const selected=document.getElementById('selected-bouquet'),modal=document.getElementById('order-modal');if(selected)selected.textContent=`Вы выбрали: «${b.dataset.bouquet}»`;modal?.classList.add('open');document.body.classList.add('modal-open')}));
-      }
-    }
     fixRouteLink();
     document.querySelectorAll('[data-reveal]').forEach(e=>e.classList.add('visible'));
   }
