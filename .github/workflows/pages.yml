@@ -28,7 +28,16 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
-          cname: smflowers.ru
+
+      - name: Configure custom domain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${GITHUB_REPOSITORY}/pages" \
+            -f cname='smflowers.ru'
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
