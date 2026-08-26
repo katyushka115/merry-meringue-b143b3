@@ -1,6 +1,9 @@
 /* Live site content: editable text/media/products from Supabase. */
 (()=>{
-  const API='/supabase', SUPABASE_ORIGIN='https://avlozhwwvjqiypifoxox.supabase.co', BUCKET='bouquets';
+  const SUPABASE_ORIGIN='https://avlozhwwvjqiypifoxox.supabase.co';
+  const SUPABASE_KEY='sb_publishable_3FgdTAmKB8kw2QTrrVPA5g_vb1lya1d';
+  const BUCKET='bouquets';
+  const API=`${SUPABASE_ORIGIN}/rest/v1`;
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const mediaUrl=u=>{
     if(!u)return'';
@@ -20,7 +23,7 @@
   const json=async p=>{
     for(let attempt=0;attempt<3;attempt++){
       try{
-        const r=await fetch(API+p,{headers:{Accept:'application/json'},cache:'no-store'});
+        const r=await fetch(`${API}${p}`,{headers:{Accept:'application/json',apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`},cache:'no-store'});
         if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);
         return r.json();
       }catch(error){
@@ -35,9 +38,9 @@
   const fixRouteLink=()=>{const links=[...document.querySelectorAll('a')].filter(a=>/построить маршрут/i.test(a.textContent||''));links.forEach(a=>a.remove());const cols=document.querySelectorAll('.site-footer .footer-column');const studio=cols[cols.length-1];if(!studio)return;const a=document.createElement('a');a.href='https://yandex.ru/maps/?text='+encodeURIComponent('Москва, Ленинский проспект, 94А');a.target='_blank';a.rel='noopener noreferrer';a.textContent='Построить маршрут ↗';studio.appendChild(a)};
   async function run(){
     const results=await Promise.allSettled([
-      json('/rest/v1/site_content?select=section,content_key,content,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc'),
-      json('/rest/v1/site_media?select=section,slot_key,image_url,alt_text,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc'),
-      json('/rest/v1/products?select=id,name,description,price,image_url,is_active,is_featured,sort_order&is_active=eq.true&order=sort_order.asc,id.asc')
+      json('/site_content?select=section,content_key,content,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc'),
+      json('/site_media?select=section,slot_key,image_url,alt_text,is_visible&is_visible=eq.true&order=sort_order.asc,id.asc'),
+      json('/products?select=id,name,description,price,image_url,is_active,is_featured,sort_order&is_active=eq.true&order=sort_order.asc,id.asc')
     ]);
     const texts=results[0].status==='fulfilled'?results[0].value:[];
     const media=results[1].status==='fulfilled'?results[1].value:[];
@@ -52,7 +55,7 @@
     if(g){
       if(!products.length)g.innerHTML='';
       else{
-        g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager" decoding="async"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}">Заказать</button></div></article>`).join('');
+        g.innerHTML=products.map((p,i)=>`<article class="product visible"><div class="product-image"><span class="product-number">${String(i+1).padStart(2,'0')}</span><img src="${esc(mediaUrl(p.image_url))}" alt="${esc(p.name)}" loading="eager" decoding="async"></div><div class="product-info"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><p><strong>${Number(p.price||0).toLocaleString('ru-RU')} ₽</strong></p></div><button class="order-button" type="button" data-bouquet="${esc(p.name)}" data-product-id="${p.id}" data-product-name="${esc(p.name)}" data-product-price="${Number(p.price||0)}">Заказать</button></div></article>`).join('');
         g.querySelectorAll('[data-bouquet]').forEach(b=>b.addEventListener('click',()=>{const selected=document.getElementById('selected-bouquet'),modal=document.getElementById('order-modal');if(selected)selected.textContent=`Вы выбрали: «${b.dataset.bouquet}»`;modal?.classList.add('open');document.body.classList.add('modal-open')}));
       }
     }
