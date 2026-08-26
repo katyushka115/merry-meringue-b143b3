@@ -15,10 +15,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Patch loader
+      - name: Patch live media paths
         shell: python
         run: |
           from pathlib import Path
+
           p = Path('assets/site-content-loader.js')
           s = p.read_text(encoding='utf-8')
           s = s.replace("const INSTAGRAM = 'https://www.instagram.com/smflowers.msk?igsh=enFqZGtuaW1qNWRi&utm_source=qr';", "const INSTAGRAM = 'https://www.instagram.com/smflowers.msk/';\n  const TELEGRAM = 'https://t.me/smflowers_msk';")
@@ -30,12 +31,20 @@ jobs:
           s = s.replace(old,new)
           p.write_text(s,encoding='utf-8')
 
+          p = Path('admin-panel.html')
+          s = p.read_text(encoding='utf-8')
+          old_media = "const media=u=>{if(!u)return'';if(u.startsWith('/media/'))return u;try{const x=new URL(u),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);return i>=0?'/media/'+x.pathname.slice(i+needle.length):u}catch{return u}}"
+          new_media = "const media=u=>{if(!u)return'';const value=String(u).trim();if(value.startsWith('/media/')){const path=value.slice('/media/'.length).replace(/^product\\//i,'');return `https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/${BUCKET}/${path}`;}try{const x=new URL(value),needle=`/storage/v1/object/public/${BUCKET}/`,i=x.pathname.indexOf(needle);return i>=0?`https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/${BUCKET}/${x.pathname.slice(i+needle.length)}${x.search||''}`:value}catch{return value}}"
+          s = s.replace(old_media, new_media)
+          s = s.replace("return '/media/'+path", "return `https://avlozhwwvjqiypifoxox.supabase.co/storage/v1/object/public/${BUCKET}/${path}`")
+          p.write_text(s,encoding='utf-8')
+
       - name: Commit
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/site-content-loader.js
+          git add assets/site-content-loader.js admin-panel.html
           git diff --cached --quiet && exit 0
-          git commit -m "Fix studio signature and social links"
+          git commit -m "Use direct Supabase media URLs in admin and site"
           git push
