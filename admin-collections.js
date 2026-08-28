@@ -4,13 +4,20 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const json=async(url,opt={})=>{const r=await fetch(url,{...opt,headers:{...H,...(opt.headers||{})},cache:'no-store'});if(!r.ok){let m='HTTP '+r.status;try{const x=await r.json();m=x.message||x.hint||m}catch{}throw Error(m)}return r.status===204?null:r.json()};
 const upload=async file=>{const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path='categories/'+crypto.randomUUID()+'.'+ext,r=await fetch(DB+'/storage/v1/object/'+bucket+'/'+path,{method:'POST',headers:{...H,'Content-Type':file.type||'image/jpeg'},body:file});if(!r.ok)throw Error('Не удалось загрузить фото');return DB+'/storage/v1/render/image/public/'+bucket+'/'+path};
 const loadCats=()=>json(DB+'/rest/v1/categories?select=id,name,slug,description,image_url,sort_order,is_active,created_at&order=sort_order.asc,id.asc');
+const loadProduct=async id=>{const a=await json(DB+'/rest/v1/products?id=eq.'+encodeURIComponent(id)+'&select=id,category_id');return a?.[0]||null};
 const slugify=s=>String(s).toLowerCase().trim().replace(/[^a-z0-9а-яё]+/gi,'-').replace(/^-+|-+$/g,'')||'collection';
+function getProductSelect(){return document.querySelector('#productForm #pcollection')||document.querySelector('#productForm [data-pcollection]')}
+function ensureProductSelect(){const form=document.getElementById('productForm');if(!form)return null;let select=getProductSelect();if(select)return select;const label=document.createElement('label');label.id='smProductCollectionField';label.textContent='Коллекция';select=document.createElement('select');select.id='pcollection';select.name='category_id';select.innerHTML='<option value="">Без коллекции</option>';label.appendChild(select);const file=document.getElementById('pfile');if(file&&file.closest('label'))file.closest('label').insertAdjacentElement('beforebegin',label);else form.insertBefore(label,form.firstChild);return select}
+async function updateProductSelect(data){const select=ensureProductSelect();if(!select)return;const cur=select.value;select.innerHTML='<option value="">Без коллекции</option>'+data.filter(c=>c.is_active!==false).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');if(cur)select.value=cur}
+async function syncProductCategory(id){const select=getProductSelect();if(!select||!id)return;const value=select.value;const category_id=value?Number(value):null;const r=await fetch(DB+'/rest/v1/products?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{...H,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({category_id,updated_at:new Date().toISOString()})});if(!r.ok)throw Error('Не удалось сохранить коллекцию букета')}
+function installProductSaveBridge(){const form=document.getElementById('productForm');if(!form||form.__collectionBridge)return;form.__collectionBridge=true;const original=form.onsubmit;form.onsubmit=async e=>{const select=getProductSelect(),pid=document.getElementById('pid'),name=document.getElementById('pname');const selected=select?.value||'';const beforeId=pid?.value||'';if(original)await original.call(form,e);if(e.defaultPrevented===false){try{let id=pid?.value||beforeId;if(!id&&name?.value.trim()){const slug=slugify(name.value);const rows=await json(DB+'/rest/v1/products?slug=eq.'+encodeURIComponent(slug)+'&select=id&limit=1');id=rows?.[0]?.id||''}if(id)await syncProductCategory(id)}catch(err){console.error('category save',err);alert(err.message)}}};}
+async function loadCategoryIntoForm(id){const select=ensureProductSelect();if(!select)return;try{const p=await loadProduct(id);select.value=p?.category_id?String(p.category_id):''}catch(e){console.error('category load',e)}}
+function bindEditBridge(){document.querySelectorAll('#productsList [data-edit]').forEach(b=>{if(b.__catBound)return;b.__catBound=true;b.addEventListener('click',()=>{setTimeout(()=>loadCategoryIntoForm(b.dataset.edit),120)})})}
 function dedupeProductSelect(){const selects=[...document.querySelectorAll('#productForm select#pcollection')];selects.slice(1).forEach(s=>{const label=s.closest('label');if(label)label.remove();else s.remove()});return selects[0]||null}
-function updateProductSelects(data){const select=dedupeProductSelect();if(!select)return;const cur=select.value;select.innerHTML='<option value="">Без коллекции</option>'+data.filter(c=>c.is_active!==false).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');if(cur)select.value=cur}
+function updateProductSelects(data){const select=dedupeProductSelect()||ensureProductSelect();if(!select)return;const cur=select.value;select.innerHTML='<option value="">Без коллекции</option>'+data.filter(c=>c.is_active!==false).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');if(cur)select.value=cur}
 async function render(){
  const box=document.getElementById('siteEditor');if(!box||box.classList.contains('hidden'))return;
  const tile=document.querySelector('.site-tile.active'),block=tile?.dataset.block||'',title=box.querySelector('h3')?.textContent||'';
- dedupeProductSelect();
  if(block!=='Коллекции'&&!/коллекц/i.test(title))return;
  if(document.getElementById('smCollectionsManager'))return;
  try{
@@ -24,30 +31,8 @@ async function render(){
   document.getElementById('smCancelCollection').onclick=()=>form.classList.add('hidden');
   document.getElementById('smSaveCollection').onclick=async()=>{const msg=document.getElementById('smCmsg');try{const id=document.getElementById('smCid').value,name=document.getElementById('smCname').value.trim();if(!name)throw Error('Введите название коллекции');const f=document.getElementById('smCfile').files[0],payload={name,slug:slugify(name),description:document.getElementById('smCdesc').value.trim()};if(f)payload.image_url=await upload(f);if(!id){const last=await json(DB+'/rest/v1/categories?select=sort_order&order=sort_order.desc,id.desc&limit=1');payload.sort_order=Number(last?.[0]?.sort_order||0)+1;payload.is_active=true;await json(DB+'/rest/v1/categories',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)})}else await json(DB+'/rest/v1/categories?id=eq.'+id,{method:'PATCH',headers:{'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});form.classList.add('hidden');await draw()}catch(e){msg.textContent=e.message}};
   await draw();
- }catch(e){console.error('collection manager',e);const manager=document.getElementById('smCollectionsManager');if(manager)manager.remove()}
+ }catch(e){console.error('collection manager',e)}
 }
-
-function installProductDelete(){
- const list=document.getElementById('productsList');if(!list)return;
- list.querySelectorAll('.sm-product-delete,[data-delete-product]').forEach(b=>b.remove());
- list.querySelectorAll('.row').forEach(row=>{
-   const edit=row.querySelector('[data-edit]');if(!edit)return;
-   const id=edit.getAttribute('data-edit');if(!id)return;
-   const del=document.createElement('button');del.type='button';del.className='danger sm-product-delete';del.textContent='Удалить букет';del.style.marginLeft='8px';del.dataset.productId=id;
-   edit.insertAdjacentElement('afterend',del);
-   del.onclick=async()=>{
-     const name=row.querySelector('b')?.textContent?.trim()||'этот букет';
-     if(!confirm(`Удалить букет «${name}»?\n\nОн исчезнет с сайта и из каталога. Существующие заказы сохранятся.`))return;
-     del.disabled=true;del.textContent='Удаление…';
-     try{await json(DB+'/rest/v1/products?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{'Prefer':'return=minimal'}});row.remove()}
-     catch(e){del.disabled=false;del.textContent='Удалить букет';alert('Не удалось удалить букет: '+e.message)}
-   };
- });
-}
-let deleteTimer=null;
-const scheduleDeleteFix=()=>{clearTimeout(deleteTimer);deleteTimer=setTimeout(installProductDelete,80)};
-const observer=new MutationObserver(scheduleDeleteFix);
-observer.observe(document.body,{subtree:true,childList:true});
-setInterval(()=>{dedupeProductSelect();render();installProductDelete()},1500);
-setTimeout(()=>{render();installProductDelete()},500);
+function installProductDelete(){const list=document.getElementById('productsList');if(!list)return;list.querySelectorAll('.sm-product-delete,[data-delete-product]').forEach(b=>b.remove());list.querySelectorAll('.row').forEach(row=>{const edit=row.querySelector('[data-edit]');if(!edit)return;const id=edit.getAttribute('data-edit');if(!id)return;const del=document.createElement('button');del.type='button';del.className='danger sm-product-delete';del.textContent='Удалить букет';del.style.marginLeft='8px';del.dataset.productId=id;edit.insertAdjacentElement('afterend',del);del.onclick=async()=>{const name=row.querySelector('b')?.textContent?.trim()||'этот букет';if(!confirm(`Удалить букет «${name}»?\n\nОн исчезнет с сайта и из каталога. Существующие заказы сохранятся.`))return;del.disabled=true;del.textContent='Удаление…';try{await json(DB+'/rest/v1/products?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{'Prefer':'return=minimal'}});row.remove()}catch(e){del.disabled=false;del.textContent='Удалить букет';alert('Не удалось удалить букет: '+e.message)}}})}
+let deleteTimer=null;const scheduleDeleteFix=()=>{clearTimeout(deleteTimer);deleteTimer=setTimeout(()=>{installProductSaveBridge();bindEditBridge();installProductDelete()},80)};const observer=new MutationObserver(scheduleDeleteFix);observer.observe(document.body,{subtree:true,childList:true});setInterval(()=>{dedupeProductSelect();installProductSaveBridge();bindEditBridge();render();installProductDelete()},1200);setTimeout(()=>{dedupeProductSelect();installProductSaveBridge();bindEditBridge();render();installProductDelete()},500);
 })();
