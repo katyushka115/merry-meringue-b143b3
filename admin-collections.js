@@ -26,6 +26,31 @@ async function render(){
   await draw();
  }catch(e){console.error('collection manager',e);const manager=document.getElementById('smCollectionsManager');if(manager)manager.remove()}
 }
-new MutationObserver(()=>setTimeout(render,120)).observe(document.body,{subtree:true,childList:true});
-setInterval(()=>{dedupeProductSelect();render()},1500);setTimeout(render,500);
+
+// Безопасное удаление букета из каталога. Не удаляет заказы: order_items.product_id имеет ON DELETE SET NULL.
+function installProductDelete(){
+ const forms=document.querySelectorAll('#productForm');
+ if(!forms.length)return;
+ document.querySelectorAll('#productList [data-edit], #productsList [data-edit], [data-edit]').forEach(edit=>{
+   if(edit.dataset.smDeleteBound==='1')return;
+   const id=edit.getAttribute('data-edit');
+   if(!id)return;
+   const card=edit.closest('.card,.row,article,li,div');
+   if(!card)return;
+   const del=document.createElement('button');del.type='button';del.className='danger sm-product-delete';del.textContent='Удалить букет';del.style.marginLeft='8px';del.dataset.smDeleteBound='1';
+   edit.insertAdjacentElement('afterend',del);
+   del.onclick=async()=>{
+     const name=card.querySelector('h3,h4,b')?.textContent?.trim()||'этот букет';
+     if(!confirm(`Удалить букет «${name}»?\n\nОн исчезнет с сайта и из каталога. Существующие заказы сохранятся.`))return;
+     del.disabled=true;del.textContent='Удаление…';
+     try{
+       await json(DB+'/rest/v1/products?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+       card.remove();
+       alert('Букет удалён.');
+     }catch(e){del.disabled=false;del.textContent='Удалить букет';alert('Не удалось удалить букет: '+e.message)}
+   };
+ });
+}
+new MutationObserver(()=>setTimeout(()=>{render();installProductDelete()},120)).observe(document.body,{subtree:true,childList:true});
+setInterval(()=>{dedupeProductSelect();render();installProductDelete()},1500);setTimeout(()=>{render();installProductDelete()},500);
 })();
